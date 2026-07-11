@@ -1,6 +1,6 @@
 import streamlit as st
-from utils.nav import render_sidebar, render_global_search_bar
-from utils.chatbot import render_chatbot
+from utils.nav import render_sidebar
+from utils.chatbot import render_chatbot_button, render_chatbot_window
 from producer.dashboard import render_producer_dashboard
 from producer.inventory import render_inventory
 from producer.merchant_matching import render_merchant_matching
@@ -11,7 +11,9 @@ if st.session_state.get("role") != "producer":
     st.switch_page("app.py")
 
 render_sidebar()
-render_global_search_bar() # <--- ADD THIS LINE
+
+# Open Chat button at the top
+render_chatbot_button()
 
 tab = st.session_state.get("current_tab", "Dashboard")
 if tab == "Dashboard":
@@ -21,4 +23,5 @@ elif tab == "Inventory":
 elif tab == "Find Merchants":
     render_merchant_matching()
 
-render_chatbot()
+# Floating chat window
+render_chatbot_window()
