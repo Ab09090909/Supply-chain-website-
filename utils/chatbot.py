@@ -2,46 +2,24 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the AI chatbot with button at top of page."""
+    """Renders the AI chatbot with button near welcome message."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # If closed, show open button at top of page
+    # If closed, show open button near welcome area
     if not st.session_state.chatbot_visible:
-        # Place button right at the top in a prominent position
-        st.markdown("""
-        <style>
-        .top-chat-button {
-            background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            text-align: center;
-            margin: 20px auto;
-            display: inline-block;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
-            cursor: pointer;
-        }
-        .top-chat-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Create a centered button at the top
-        col1, col2, col3 = st.columns([1, 2, 1])
+        # Create a row with the button on the right side
+        col1, col2 = st.columns([6, 1])
         with col2:
-            if st.button("💬 Open AI Assistant Chat", key="fab_open_chat", type="primary", use_container_width=True):
+            if st.button("💬 Open Chat", key="fab_open_chat", type="primary", use_container_width=True):
                 st.session_state.chatbot_visible = True
                 st.rerun()
         return
 
-    # Chat interface is open - show at top of page
-    st.markdown("### 💬 EthioChain AI Assistant")
+    # Chat interface is open
+    st.markdown("### 💬 EthioChain AI")
     
     col1, col2 = st.columns([4, 1])
     with col1:
@@ -141,6 +119,6 @@ If the user greets you, welcome them warmly and briefly list 2-3 ways you can he
         return resp.json()["choices"][0]["message"]["content"]
         
     except requests.exceptions.Timeout:
-        return "⚠️ Request timeout. Please try again."
+        return "️ Request timeout. Please try again."
     except Exception as e:
-        return f"⚠️ Error: {str(e)}"
+        return f"️ Error: {str(e)}"
