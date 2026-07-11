@@ -2,37 +2,46 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the AI chatbot with fixed position button at top."""
+    """Renders the AI chatbot with button fixed at top of screen."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS to position button at top-right
+    # CSS for fixed positioning at top
     st.markdown("""
     <style>
-    /* Position the Open Chat button at top-right */
-    div[data-testid="stButton"] button[kind="primary"][data-testid="baseButton-primary"] {
-        position: fixed !important;
-        top: 20px !important;
-        right: 20px !important;
-        z-index: 9999 !important;
-        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%) !important;
-        color: white !important;
-        border: none !important;
-        padding: 12px 24px !important;
-        border-radius: 50px !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4) !important;
+    /* Hide the default Streamlit button */
+    .stButton > button {
+        display: none !important;
     }
     
-    div[data-testid="stButton"] button[kind="primary"][data-testid="baseButton-primary"]:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6) !important;
+    /* Create custom floating button at top-right */
+    .top-chat-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
     }
     
-    /* Push content down so button doesn't overlap */
+    .top-chat-button button {
+        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
+    }
+    
+    .top-chat-button button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
+    }
+    
+    /* Push main content down */
     .block-container {
         padding-top: 80px !important;
     }
@@ -41,12 +50,15 @@ def render_chatbot():
 
     # If closed, show open button at top
     if not st.session_state.chatbot_visible:
-        if st.button("💬 Open Chat", key="fab_open_chat", type="primary"):
-            st.session_state.chatbot_visible = True
-            st.rerun()
+        # Use columns to position button at top-right
+        col1, col2 = st.columns([6, 1])
+        with col2:
+            if st.button("💬 Open Chat", key="fab_open_chat", type="primary", use_container_width=True):
+                st.session_state.chatbot_visible = True
+                st.rerun()
         return
 
-    # Chat Header
+    # Chat interface is open
     st.markdown("### 💬 EthioChain AI")
     
     col1, col2 = st.columns([4, 1])
@@ -89,7 +101,6 @@ def get_response(prompt, role):
     except KeyError:
         return "⚠️ GROQ_API_KEY not found in secrets."
     
-    # --- DETAILED INSTRUCTIONS FOR GROQ ---
     system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
 STRICT RULES:
@@ -107,17 +118,13 @@ The current user is logged in as a: {role}.
 - If Admin: Help them with platform oversight, user management, and system health.
 
 If the user greets you, welcome them warmly and briefly list 2-3 ways you can help them based on their role."""
-    # --------------------------------------
 
-    # Build messages array
     messages = [{"role": "system", "content": system_prompt}]
     
-    # Add chat history (limit to last 8 to save tokens and prevent 400 errors)
     for msg in st.session_state.chat_history[-8:]:
         if "role" in msg and "content" in msg:
             messages.append({"role": msg["role"], "content": msg["content"]})
     
-    # Ensure messages alternate properly (remove consecutive same-role messages)
     cleaned_messages = [messages[0]]
     for i in range(1, len(messages)):
         if messages[i]["role"] != messages[i-1]["role"]:
