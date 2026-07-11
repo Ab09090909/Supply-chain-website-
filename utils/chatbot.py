@@ -1,112 +1,81 @@
 import streamlit as st
 import requests
 
-def render_chatbot():
-    """Renders the AI Assistant button at top, or full chat window when open."""
-    if "chatbot_visible" not in st.session_state:
-        st.session_state.chatbot_visible = False
+def render_chatbot_in_sidebar():
+    """Renders the AI chatbot in the sidebar."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if "sidebar_chat_collapsed" not in st.session_state:
+        st.session_state.sidebar_chat_collapsed = False
+    if "chatbot_visible" not in st.session_state:
+        st.session_state.chatbot_visible = True
 
-    # If chatbot is closed, show the button at top
-    if not st.session_state.chatbot_visible:
-        st.markdown("""
-        <style>
-        .ai-button-container {
-            margin: 20px 0;
-            text-align: center;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("💬 AI Assistant", key="open_chat_btn", type="primary", use_container_width=True):
+    with st.sidebar:
+        st.markdown("---")
+
+        # Show open button if chat was exited
+        if not st.session_state.chatbot_visible:
+            if st.button("💬 Open AI Assistant", key="open_chat_btn", use_container_width=True):
                 st.session_state.chatbot_visible = True
                 st.rerun()
-        return
+            return
 
-    # Chatbot is open - show full chat window
-    st.markdown("""
-    <style>
-    .chat-window {
-        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
-        border-radius: 16px;
-        border: 2px solid #2E86C1;
-        padding: 20px;
-        margin: 20px 0;
-        box-shadow: 0 8px 24px rgba(46, 134, 193, 0.3);
-    }
-    .chat-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #2E86C1;
-    }
-    .chat-title {
-        font-size: 24px;
-        font-weight: bold;
-        color: #2E86C1;
-    }
-    .chat-subtitle {
-        color: #a0a0a0;
-        font-size: 14px;
-        margin-top: 5px;
-    }
-    </style>
-    
-    <div class="chat-window">
-        <div class="chat-header">
-            <div>
-                <div class="chat-title">💬 EthioChain AI Assistant</div>
-                <div class="chat-subtitle">English / አማርኛ</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Exit button at top right
-    col1, col2 = st.columns([5, 1])
-    with col2:
-        if st.button("❌ Exit", key="close_chat_btn", use_container_width=True):
-            st.session_state.chatbot_visible = False
-            st.rerun()
-    
-    role = st.session_state.get("role", "customer")
-    
-    # Chat messages area
-    chat_container = st.container(height=400, border=True)
-    
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.info("👋 Welcome! Ask me anything about EthioChain supply chain.")
-        
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("Type your message...", key="chat_input"):
-        # Add user message
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        
-        # Display user message
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-        
-        # Get AI response
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = get_response(prompt, role)
-                    st.markdown(response)
-        
-        # Add assistant response
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
-        st.rerun()
+        # Header row: title | clear | collapse | exit
+        col1, col2, col3, col4 = st.columns([4, 1, 1, 1])
+        with col1:
+            st.markdown("### 💬 AI Assistant")
+        with col2:
+            if st.button("🗑️", key="clear_chat_btn", help="Clear chat history"):
+                st.session_state.chat_history = []
+                st.rerun()
+        with col3:
+            if st.session_state.sidebar_chat_collapsed:
+                if st.button("➕", key="expand_chat", help="Expand chat"):
+                    st.session_state.sidebar_chat_collapsed = False
+                    st.rerun()
+            else:
+                if st.button("➖", key="collapse_chat", help="Collapse chat"):
+                    st.session_state.sidebar_chat_collapsed = True
+                    st.rerun()
+        with col4:
+            if st.button("✖", key="exit_chat_btn", help="Close chat"):
+                st.session_state.chatbot_visible = False
+                st.session_state.sidebar_chat_collapsed = False
+                st.rerun()
+
+        if not st.session_state.sidebar_chat_collapsed:
+            st.caption("English / አማርኛ")
+            st.markdown("---")
+
+            role = st.session_state.get("role", "customer")
+
+            # Chat messages area
+            chat_container = st.container(height=300)
+            with chat_container:
+                if not st.session_state.chat_history:
+                    st.info("👋 Welcome! Ask me anything about EthioChain.")
+
+                for message in st.session_state.chat_history:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+
+            # Chat input
+            if prompt := st.chat_input("Type your message...", key="sidebar_chat_input"):
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+
+                with chat_container:
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+
+                with chat_container:
+                    with st.chat_message("assistant"):
+                        with st.spinner("Thinking..."):
+                            response = get_response(prompt, role)
+                            st.markdown(response)
+
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                st.rerun()
+
 
 def get_response(prompt, role):
     """Calls Groq API with detailed system instructions."""
@@ -114,7 +83,7 @@ def get_response(prompt, role):
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
         return "⚠️ GROQ_API_KEY not found in secrets."
-    
+
     system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
 STRICT RULES:
@@ -134,18 +103,19 @@ The current user is logged in as a: {role}.
 If the user greets you, welcome them warmly and briefly list 2-3 ways you can help them based on their role."""
 
     messages = [{"role": "system", "content": system_prompt}]
-    
+
     for msg in st.session_state.chat_history[-8:]:
         if "role" in msg and "content" in msg:
             messages.append({"role": msg["role"], "content": msg["content"]})
-    
+
+    # Merge consecutive same-role messages
     cleaned_messages = [messages[0]]
     for i in range(1, len(messages)):
-        if messages[i]["role"] != messages[i-1]["role"]:
+        if messages[i]["role"] != cleaned_messages[-1]["role"]:
             cleaned_messages.append(messages[i])
         else:
             cleaned_messages[-1]["content"] += "\n" + messages[i]["content"]
-    
+
     try:
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -161,17 +131,16 @@ If the user greets you, welcome them warmly and briefly list 2-3 ways you can he
             },
             timeout=30
         )
-        
+
         if resp.status_code != 200:
             try:
-                error_data = resp.json()
-                error_msg = error_data.get("error", {}).get("message", resp.text)
-                return f"⚠️ API Error {resp.status_code}: {error_msg}"
-            except:
-                return f"⚠️ API Error {resp.status_code}: {resp.text}"
-            
+                error_msg = resp.json().get("error", {}).get("message", resp.text)
+            except Exception:
+                error_msg = resp.text
+            return f"⚠️ API Error {resp.status_code}: {error_msg}"
+
         return resp.json()["choices"][0]["message"]["content"]
-        
+
     except requests.exceptions.Timeout:
         return "⚠️ Request timeout. Please try again."
     except Exception as e:
