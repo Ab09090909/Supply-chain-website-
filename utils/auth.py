@@ -4,7 +4,6 @@ from utils.db import supabase
 def login(email: str, password: str) -> bool:
     """Handles user login via Supabase Auth and sets session state."""
     try:
-        # Authenticate with Supabase
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         user = res.user
         
@@ -12,7 +11,6 @@ def login(email: str, password: str) -> bool:
             st.error("Invalid email or password.")
             return False
 
-        # Fetch user profile to get role and details
         profile_res = supabase.table("profiles").select("*").eq("id", user.id).execute()
         
         if not profile_res.data:
@@ -21,7 +19,6 @@ def login(email: str, password: str) -> bool:
 
         profile = profile_res.data[0]
 
-        # Store in session state
         st.session_state.user_id = user.id
         st.session_state.role = profile["role"]
         st.session_state.name = profile["name"]
@@ -34,6 +31,61 @@ def login(email: str, password: str) -> bool:
         st.error(f"Login failed: {str(e)}")
         return False
 
+def signup(email: str, password: str, name: str, city: str, role: str, phone: str = None) -> bool:
+    """Handles user signup via Supabase Auth and creates a profile."""
+    try:
+        res = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "name": name,
+                    "city": city,
+                    "role": role,
+                    "phone": phone
+                }
+            }
+        })
+        
+        user = res.user
+        if not user:
+            st.error("Signup failed. Please try again.")
+            return False
+            
+        profile_data = {
+            "id": user.id,
+            "role": role,
+            "name": name,
+            "city": city,
+            "phone": phone,
+            "verification_status": "unverified"
+        }
+        
+        try:
+            supabase.table("profiles").insert(profile_data).execute()
+        except Exception:
+            supabase.table("profiles").update(profile_data).eq("id", user.id).execute()
+            
+        st.success("Account created successfully! Please log in.")
+        return True
+        
+    except Exception as e:
+        if "already registered" in str(e).lower() or "duplicate" in str(e).lower():
+            st.error("This email is already registered. Please log in.")
+        else:
+            st.error(f"Signup failed: {str(e)}")
+        return False
+
+def reset_password(email: str) -> bool:
+    """Sends a password reset email via Supabase Auth."""
+    try:
+        # Supabase will send a magic link/password reset link to the user's email
+        supabase.auth.reset_password_for_email(email)
+        return True
+    except Exception as e:
+        st.error(f"Failed to send reset email: {str(e)}")
+        return False
+
 def logout():
     """Clears session state and logs the user out."""
     try:
@@ -41,7 +93,6 @@ def logout():
     except Exception:
         pass
     
-    # Clear all session state keys
     for key in list(st.session_state.keys()):
         del st.session_state[key]
         
