@@ -1,9 +1,11 @@
 import streamlit as st
 from utils.db import supabase
+import time
 
 def login(email: str, password: str) -> bool:
     """Handles user login via Supabase Auth and sets session state."""
     try:
+        # Authenticate with Supabase
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         user = res.user
         
@@ -11,6 +13,7 @@ def login(email: str, password: str) -> bool:
             st.error("Invalid email or password.")
             return False
 
+        # Fetch user profile to get role and details
         profile_res = supabase.table("profiles").select("*").eq("id", user.id).execute()
         
         if not profile_res.data:
@@ -19,10 +22,13 @@ def login(email: str, password: str) -> bool:
 
         profile = profile_res.data[0]
 
+        # Store in session state
         st.session_state.user_id = user.id
         st.session_state.role = profile["role"]
         st.session_state.name = profile["name"]
         st.session_state.city = profile["city"]
+        st.session_state.phone = profile.get("phone")
+        st.session_state.verification_status = profile.get("verification_status", "unverified")
         st.session_state.authenticated = True
 
         return True
@@ -34,6 +40,7 @@ def login(email: str, password: str) -> bool:
 def signup(email: str, password: str, name: str, city: str, role: str, phone: str = None) -> bool:
     """Handles user signup via Supabase Auth and creates a profile."""
     try:
+        # 1. Create the auth user
         res = supabase.auth.sign_up({
             "email": email,
             "password": password,
@@ -52,26 +59,40 @@ def signup(email: str, password: str, name: str, city: str, role: str, phone: st
             st.error("Signup failed. Please try again.")
             return False
             
+        # 2. Wait a moment for user to be created in auth
+        time.sleep(0.5)
+        
+        # 3. Create the profile in the profiles table
         profile_data = {
             "id": user.id,
             "role": role,
             "name": name,
             "city": city,
             "phone": phone,
-            "verification_status": "unverified"
+            "verification_status": "unverified"  # New users start unverified
         }
         
+        # First try to insert
         try:
-            supabase.table("profiles").insert(profile_data).execute()
-        except Exception:
-            supabase.table("profiles").update(profile_data).eq("id", user.id).execute()
-            
-        st.success("Account created successfully! Please log in.")
-        return True
+            result = supabase.table("profiles").insert(profile_data).execute()
+            st.success("✅ Account created successfully! Please check your email to confirm your account, then log in.")
+            return True
+        except Exception as insert_error:
+            # If insert fails (might already exist), try update
+            try:
+                result = supabase.table("profiles").upsert(profile_data).execute()
+                st.success("✅ Account created successfully! Please check your email to confirm your account, then log in.")
+                return True
+            except Exception as update_error:
+                st.error(f"Profile creation issue: {str(update_error)}")
+                return False
         
     except Exception as e:
-        if "already registered" in str(e).lower() or "duplicate" in str(e).lower():
+        error_msg = str(e).lower()
+        if "already registered" in error_msg or "duplicate" in error_msg:
             st.error("This email is already registered. Please log in.")
+        elif "weak password" in error_msg:
+            st.error("Password is too weak. Please use at least 6 characters.")
         else:
             st.error(f"Signup failed: {str(e)}")
         return False
@@ -93,6 +114,7 @@ def logout():
     except Exception:
         pass
     
+    # Clear all session state keys
     for key in list(st.session_state.keys()):
         del st.session_state[key]
         
