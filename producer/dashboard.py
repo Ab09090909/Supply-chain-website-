@@ -23,90 +23,89 @@ def render_producer_dashboard():
         total_orders = len(orders)
         total_revenue = sum(o["total_price_etb"] for o in orders if o["status"] in ["Delivered", "Completed"])
         
-        # --- MODERNIZED SINGLE BOX METRICS ---
-        st.markdown("""
+        # --- HORIZONTAL FLEXBOX METRICS ---
+        # We use pure HTML/CSS Flexbox to force them side-by-side, 
+        # bypassing Streamlit's mobile stacking behavior.
+        
+        metrics_html = f"""
         <style>
-        /* The main unified card */
-        .modern-stats-card {
+        .stats-row-container {{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
             background: linear-gradient(135deg, #1a1d29 0%, #232736 100%);
             border-radius: 16px;
-            padding: 25px;
+            padding: 20px 10px;
             border: 1px solid #2E86C1;
             box-shadow: 0 8px 24px rgba(46, 134, 193, 0.15);
             margin-bottom: 30px;
-        }
-        /* Individual metric styling */
-        .metric-item {
+            width: 100%;
+            box-sizing: border-box;
+        }}
+        .stat-box {{
+            flex: 1;
             text-align: center;
-            padding: 10px;
-        }
-        .metric-label {
-            color: #a0a0a0;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .metric-value {
-            color: #ffffff;
-            font-size: 32px;
-            font-weight: 700;
-            margin: 0;
-        }
-        .metric-icon {
+            padding: 10px 5px;
+            border-right: 1px solid rgba(46, 134, 193, 0.3);
+        }}
+        .stat-box:last-child {{
+            border-right: none;
+        }}
+        .stat-icon {{
             font-size: 24px;
-            margin-bottom: 10px;
-        }
-        /* Divider between metrics */
-        .metric-divider {
-            width: 1px;
-            background-color: #2E86C1;
-            opacity: 0.3;
-        }
+            margin-bottom: 5px;
+        }}
+        .stat-label {{
+            color: #a0a0a0;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }}
+        .stat-value {{
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+        }}
+        /* Mobile adjustment: allow wrapping if screen is extremely small */
+        @media (max-width: 400px) {{
+            .stats-row-container {{
+                flex-wrap: wrap;
+            }}
+            .stat-box {{
+                flex: 1 1 30%; /* Try to keep 3 in a row, but allow wrap */
+                border-right: none;
+                border-bottom: 1px solid rgba(46, 134, 193, 0.3);
+                padding: 15px 0;
+            }}
+            .stat-box:last-child {{
+                border-bottom: none;
+            }}
+        }}
         </style>
-        """, unsafe_allow_html=True)
         
-        # Render the unified card
-        st.markdown('<div class="modern-stats-card">', unsafe_allow_html=True)
-        
-        col1, div1, col2, div2, col3 = st.columns([1, 0.05, 1, 0.05, 1])
-        
-        with col1:
-            st.markdown(f"""
-                <div class="metric-item">
-                    <div class="metric-icon">📦</div>
-                    <div class="metric-label">Active Listings</div>
-                    <div class="metric-value">{active_listings}</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        with div1:
-            st.markdown('<div class="metric-divider"></div>', unsafe_allow_html=True)
-            
-        with col2:
-            st.markdown(f"""
-                <div class="metric-item">
-                    <div class="metric-icon">🛒</div>
-                    <div class="metric-label">Total Orders</div>
-                    <div class="metric-value">{total_orders}</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        with div2:
-            st.markdown('<div class="metric-divider"></div>', unsafe_allow_html=True)
-            
-        with col3:
-            st.markdown(f"""
-                <div class="metric-item">
-                    <div class="metric-icon"></div>
-                    <div class="metric-label">Total Revenue</div>
-                    <div class="metric-value">{format_etb(total_revenue)}</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        st.markdown('</div>', unsafe_allow_html=True)
-        # ---------------------------------------
+        <div class="stats-row-container">
+            <div class="stat-box">
+                <div class="stat-icon">📦</div>
+                <div class="stat-label">Active Listings</div>
+                <div class="stat-value">{active_listings}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">🛒</div>
+                <div class="stat-label">Total Orders</div>
+                <div class="stat-value">{total_orders}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"></div>
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">{format_etb(total_revenue)}</div>
+            </div>
+        </div>
+        """
+        st.markdown(metrics_html, unsafe_allow_html=True)
+        # ------------------------------------
         
     except Exception as e:
         st.error(f"Failed to load dashboard metrics: {str(e)}")
