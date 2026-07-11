@@ -2,70 +2,52 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the AI chatbot with button fixed at top of screen."""
+    """Renders the AI chatbot with button at top of page."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for fixed positioning at top
-    st.markdown("""
-    <style>
-    /* Hide the default Streamlit button */
-    .stButton > button {
-        display: none !important;
-    }
-    
-    /* Create custom floating button at top-right */
-    .top-chat-button {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-    }
-    
-    .top-chat-button button {
-        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
-    }
-    
-    .top-chat-button button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
-    }
-    
-    /* Push main content down */
-    .block-container {
-        padding-top: 80px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # If closed, show open button at top
+    # If closed, show open button at top of page
     if not st.session_state.chatbot_visible:
-        # Use columns to position button at top-right
-        col1, col2 = st.columns([6, 1])
+        # Place button right at the top in a prominent position
+        st.markdown("""
+        <style>
+        .top-chat-button {
+            background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-align: center;
+            margin: 20px auto;
+            display: inline-block;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
+            cursor: pointer;
+        }
+        .top-chat-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Create a centered button at the top
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("💬 Open Chat", key="fab_open_chat", type="primary", use_container_width=True):
+            if st.button("💬 Open AI Assistant Chat", key="fab_open_chat", type="primary", use_container_width=True):
                 st.session_state.chatbot_visible = True
                 st.rerun()
         return
 
-    # Chat interface is open
-    st.markdown("### 💬 EthioChain AI")
+    # Chat interface is open - show at top of page
+    st.markdown("### 💬 EthioChain AI Assistant")
     
     col1, col2 = st.columns([4, 1])
     with col1:
         st.caption("English / አማርኛ")
     with col2:
-        if st.button("❌ Exit", key="chat_exit_btn"):
+        if st.button("❌ Close Chat", key="chat_exit_btn"):
             st.session_state.chatbot_visible = False
             st.rerun()
             
