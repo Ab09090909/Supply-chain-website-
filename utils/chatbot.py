@@ -3,184 +3,139 @@ import requests
 from utils.ai_instructions import get_system_prompt
 
 def render_chatbot():
-    """Renders a compact, floating AI chatbot with an exit button."""
+    """Renders the floating chat icon and the pop-up chat card."""
     
-    # Initialize session state for chatbot visibility
+    # Initialize session state
     if "chatbot_visible" not in st.session_state:
-        st.session_state.chatbot_visible = True
+        st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for the compact floating chatbot
+    # Inject CSS for the floating button and the pop-up card
     st.markdown("""
     <style>
-    /* Floating Container - Bottom Right */
-    .chatbot-container {
+    /* 1. Floating Action Button (FAB) */
+    .chat-fab-wrapper {
         position: fixed;
         bottom: 20px;
         right: 20px;
         z-index: 9999;
-        width: 320px;
     }
-    /* The Chat Box - Reduced Height */
-    .chat-box {
-        background-color: #1a1d29;
-        border: 1px solid #2E86C1;
+    
+    /* 2. The Pop-up Card Container */
+    .chat-popup-card {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        width: 350px;
+        background-color: #0f1117; /* Dark background */
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        border: 1px solid #2a2d36;
         overflow: hidden;
-        max-height: 350px; /* Reduced height */
         display: flex;
         flex-direction: column;
     }
-    /* Header with Exit Button */
-    .chat-header {
-        background-color: #2E86C1;
+    
+    /* 3. Blue Header Styling */
+    .chat-header-blue {
+        background-color: #2E86C1; /* Exact blue from image */
         color: white;
-        padding: 10px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: bold;
-    }
-    .exit-btn {
-        background: none;
-        border: none;
-        color: white;
+        padding: 15px 20px;
         font-size: 18px;
-        cursor: pointer;
         font-weight: bold;
-    }
-    .exit-btn:hover {
-        color: #ffcccc;
-    }
-    /* Chat Messages Area */
-    .chat-messages {
-        padding: 10px;
-        overflow-y: auto;
-        flex-grow: 1;
-        max-height: 200px; /* Limit message area height */
-        background-color: #0f1117;
-    }
-    /* Input Area */
-    .chat-input-area {
-        padding: 10px;
-        background-color: #1a1d29;
-        border-top: 1px solid #2E86C1;
         display: flex;
-        gap: 5px;
+        align-items: center;
+        gap: 10px;
+        border-radius: 12px 12px 0 0;
     }
-    /* Hide Streamlit default chat input styling inside our custom div */
-    .chat-input-area .stTextInput > div > div > input {
-        background-color: #2a2d36;
-        color: white;
-        border-radius: 20px;
-        padding: 5px 15px;
+    
+    /* 4. Chat History Box Styling */
+    .chat-history-container {
+        background-color: #1a1d29;
+        border-radius: 8px;
+        margin: 10px 15px;
+        padding: 10px;
+        min-height: 200px;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #2a2d36;
     }
-    /* Open Button (when closed) */
-    .open-chat-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
-        background-color: #2E86C1;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        font-size: 24px;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    
+    /* 5. Input Area Styling */
+    .chat-input-container {
+        margin: 0 15px 15px 15px;
     }
-    .open-chat-btn:hover {
-        background-color: #1a5276;
+    /* Force the chat input to look like the image (dark rounded box) */
+    .chat-input-container div[data-baseweb="base-input"] {
+        background-color: #1a1d29 !important;
+        border-radius: 20px !important;
+        border: 1px solid #2a2d36 !important;
+    }
+    .chat-input-container input {
+        color: white !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # If chatbot is closed, show the open button
+    # --- LOGIC: If chatbot is CLOSED, show the floating icon ---
     if not st.session_state.chatbot_visible:
-        st.markdown('<button class="open-chat-btn" onclick="alert(\'Streamlit does not support direct JS onclick, please use the button below\')">💬</button>', unsafe_allow_html=True)
-        if st.button("💬 Open Chat", key="open_chat_fab"):
+        st.markdown('<div class="chat-fab-wrapper">', unsafe_allow_html=True)
+        # Use a standard button, but the CSS wrapper will help position it if we used JS. 
+        # Since we can't use JS onclick easily, we place it at the bottom and rely on the user scrolling, 
+        # OR we use a placeholder. For simplicity and reliability, we'll just use a button here.
+        # To make it truly float without JS, we'd need an iframe, but this is the standard Streamlit way.
+        if st.button("💬", key="fab_open_chat", help="Open Chat Assistant"):
             st.session_state.chatbot_visible = True
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # If chatbot is open, show the compact box
-    st.markdown('<div class="chatbot-container"><div class="chat-box">', unsafe_allow_html=True)
+    # --- LOGIC: If chatbot is OPEN, show the Pop-up Card ---
+    st.markdown('<div class="chat-popup-card">', unsafe_allow_html=True)
     
-    # Header with Exit Button
-    st.markdown("""
-    <div class="chat-header">
-        <span>💬 EthioChain AI</span>
-    </div>
-    """, unsafe_allow_html=True)
+    # 1. Blue Header
+    st.markdown('<div class="chat-header-blue">💬 EthioChain AI</div>', unsafe_allow_html=True)
     
-    # We use a form or button to handle the exit since we can't use JS onclick easily in Streamlit
-    # We'll place the exit button logic here using Streamlit's button but styled via CSS if possible, 
-    # or just a standard button at the top. For simplicity and reliability in Streamlit:
-    
-    # Actually, let's use a Streamlit button for the exit to ensure it works perfectly
-    # We will render it inside the container using columns
-    
-    # Messages Area
-    st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
+    # 2. Subtitle and Exit Button
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.caption("💬 EthioChain AI Assistant (English / አማርኛ)")
+    with col2:
+        if st.button("❌ Exit", key="chat_exit_btn", use_container_width=True):
+            st.session_state.chatbot_visible = False
+            st.rerun()
+            
+    # 3. Chat History Box
+    st.markdown('<div class="chat-history-container">', unsafe_allow_html=True)
     role = st.session_state.get("role", "customer")
     
+    # Display history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Input Area
-    st.markdown('<div class="chat-input-area">', unsafe_allow_html=True)
-    
-    # We need to put the exit button and input in the same row. 
-    # Since we are using raw HTML/CSS wrappers, we will use Streamlit columns inside the wrapper.
-    # Note: Streamlit elements inside raw HTML divs can sometimes behave oddly, 
-    # so we will close the HTML divs and use Streamlit's native layout for the controls, 
-    # but style them to look like they are inside the box.
-    
-    st.markdown('</div></div></div>', unsafe_allow_html=True) # Close chat-input-area, chat-box, chatbot-container
-    
-    # Now render the actual interactive Streamlit elements below the visual box, 
-    # but we will use negative margins or just place them logically.
-    # Actually, the best way in Streamlit is to use `st.container` and style it.
-    
-    # Let's use a simpler, 100% reliable Streamlit-native approach for the compact chatbot:
-    with st.container():
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.caption("💬 EthioChain AI Assistant (English / አማርኛ)")
-        with col2:
-            if st.button("❌ Exit", key="exit_chatbot", help="Close chatbot"):
-                st.session_state.chatbot_visible = False
-                st.rerun()
-                
-        # Chat history
-        chat_container = st.container(height=200, border=True)
-        with chat_container:
-            for message in st.session_state.chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-                    
-        # Input
-        if prompt := st.chat_input("Ask me...", key="chatbot_input"):
-            st.session_state.chat_history.append({"role": "user", "content": prompt})
+    # 4. Input Area
+    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+    if prompt := st.chat_input("Ask me...", key="chat_input_field"):
+        # Add user message
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        
+        # Display user message immediately
+        with st.chat_message("user"):
+            st.markdown(prompt)
             
-            # Display user message immediately
-            with chat_container:
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                    
-            # Get AI response
-            with chat_container:
-                with st.chat_message("assistant"):
-                    with st.spinner("Thinking..."):
-                        response = _get_openrouter_response(prompt, role)
-                        st.markdown(response)
-                        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        # Get AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = _get_openrouter_response(prompt, role)
+                st.markdown(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                
+    st.markdown('</div>', unsafe_allow_html=True) # Close input container
+    st.markdown('</div>', unsafe_allow_html=True) # Close popup card
 
 def _get_openrouter_response(prompt: str, role: str) -> str:
     """Calls the OpenRouter API to get the AI response."""
@@ -208,4 +163,4 @@ def _get_openrouter_response(prompt: str, role: str) -> str:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        return f"⚠️ Error connecting to AI: {str(e)}"
+        return f"⚠️ Error: {str(e)}"
