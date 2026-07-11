@@ -1,4 +1,6 @@
 def get_system_prompt(role: str) -> str:
+    """Returns a simple system prompt for the AI."""
+    return "You are a helpful assistant for the EthioChain supply chain platform in Ethiopia. Always quote prices in ETB."
     """
     Returns the system prompt for the AI chatbot based on the user's role.
     """
