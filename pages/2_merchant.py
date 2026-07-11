@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.nav import render_sidebar
+from utils.nav import render_sidebar, render_global_search_bar
 from utils.chatbot import render_chatbot
 from merchant.dashboard import render_merchant_dashboard
 from merchant.marketplace import render_marketplace
@@ -12,6 +12,7 @@ if st.session_state.get("role") != "merchant":
     st.switch_page("app.py")
 
 render_sidebar()
+render_global_search_bar() # <--- ADD THIS LINE
 
 tab = st.session_state.get("current_tab", "Dashboard")
 if tab == "Dashboard":
