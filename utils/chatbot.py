@@ -1,108 +1,73 @@
-import streamlit as st
-import requests
-from utils.ai_instructions import get_system_prompt
-
-def render_chatbot():
-    if "chatbot_visible" not in st.session_state:
-        st.session_state.chatbot_visible = False
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
-    css = """
-    <style>
-    .chat-fab-wrapper { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
-    .chat-popup-card {
-        position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-        width: 350px; max-width: 90vw; background-color: #0f1117;
-        border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-        border: 1px solid #2a2d36; overflow: hidden; display: flex; flex-direction: column;
-    }
-    .chat-header-blue {
-        background-color: #2E86C1; color: white; padding: 15px 20px;
-        font-size: 18px; font-weight: bold; display: flex; align-items: center;
-        justify-content: space-between; border-radius: 12px 12px 0 0;
-    }
-    .chat-history-container {
-        background-color: #1a1d29; margin: 10px 15px; padding: 15px;
-        min-height: 250px; max-height: 350px; overflow-y: auto;
-        border-radius: 8px; border: 1px solid #2a2d36;
-    }
-    .chat-input-container { margin: 0 15px 15px 15px; }
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
-
-    if not st.session_state.chatbot_visible:
-        if st.button("Chat", key="fab_open_chat", help="Open Chat Assistant"):
-            st.session_state.chatbot_visible = True
-            st.rerun()
-        return
-
-    st.markdown('<div class="chat-popup-card">', unsafe_allow_html=True)
-    st.markdown('<div class="chat-header-blue"><span>EthioChain AI</span></div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.caption("English / Amharic")
-    with col2:
-        if st.button("X", key="chat_exit_btn", help="Close chat"):
-            st.session_state.chatbot_visible = False
-            st.rerun()
-            
-    st.markdown('<div class="chat-history-container">', unsafe_allow_html=True)
-    role = st.session_state.get("role", "customer")
-    
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
-    if prompt := st.chat_input("Ask me...", key="chat_input_field"):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        
-        with st.chat_message("user"):
-            st.markdown(prompt)
-            
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = _get_groq_response(prompt, role)
-                st.markdown(response)
-                st.session_state.chat_history.append({"role": "assistant", "content": response})
-                
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 def _get_groq_response(prompt: str, role: str) -> str:
     api_key = st.secrets.get("GROQ_API_KEY")
     
     if not api_key:
-        return "Groq API Key Not Configured. Please add GROQ_API_KEY to your Streamlit secrets."
-        
+        return "⚠️ Groq API Key not found in secrets. Please check your Streamlit Cloud configuration."
+    
+    # Clean the API key (remove any whitespace or quotes)
+    api_key = str(api_key).strip().strip('"').strip("'")
+    
+    if not api_key.startswith("gsk_"):
+        return f"⚠️ Invalid Groq API key format. Key should start with 'gsk_' but got: {api_key[:10]}..."
+    
     system_prompt = get_system_prompt(role)
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(st.session_state.chat_history[-10:])
+    
+    # Build messages array correctly
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt}
+    ]
+    
+    # Add history if exists (last 5 messages to avoid token limits)
+    if st.session_state.chat_history:
+        for msg in st.session_state.chat_history[-5:]:
+            messages.append({"role": msg["role"], "content": msg["content"]})
     
     try:
+        import json
+        # Prepare the request payload
+        payload = {
+            "model": "llama3-8b-8192",
+            "messages": messages,
+            "max_tokens": 500,
+            "temperature": 0.7,
+            "top_p": 1.0,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0
+        }
+        
         response = requests.post(
             url="https://api.groq.com/openai/v1/chat/completions",
             headers={
-                "Authorization": "Bearer " + api_key,
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
-            json={
-                "model": "llama3-8b-8192",
-                "messages": messages,
-                "max_tokens": 500,
-                "temperature": 0.7
-            },
+            json=payload,
             timeout=30
         )
+        
+        # Check for specific HTTP errors
+        if response.status_code == 401:
+            return "️ **401 Unauthorized** - Invalid API key. Please check your GROQ_API_KEY in Streamlit secrets."
+        elif response.status_code == 400:
+            error_detail = response.json().get("error", {}).get("message", "Unknown error")
+            return f"⚠️ **400 Bad Request** - {error_detail}"
+        elif response.status_code == 429:
+            return "⚠️ **429 Rate Limit** - Too many requests. Please wait a moment and try again."
+        elif response.status_code >= 500:
+            return "⚠️ **Server Error** - Groq service is temporarily unavailable. Please try again later."
+        
         response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+        result = response.json()
+        
+        if "choices" not in result or len(result["choices"]) == 0:
+            return "⚠️ Unexpected response format from Groq API."
+            
+        return result["choices"][0]["message"]["content"]
+        
     except requests.exceptions.Timeout:
-        return "Request timeout. Please try again."
-    except requests.exceptions.RequestException as e:
-        return "Connection error: " + str(e)
+        return "⚠️ **Timeout** - The request took too long. Please try again."
+    except requests.exceptions.ConnectionError:
+        return "⚠️ **Connection Error** - Cannot reach Groq API. Check your internet connection."
     except Exception as e:
-        return "Error: " + str(e)
+        return f"⚠️ **Error**: {type(e).__name__} - {str(e)}"
