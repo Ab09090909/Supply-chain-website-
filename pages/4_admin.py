@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.nav import render_sidebar
+from utils.nav import render_sidebar, render_global_search_bar
 from utils.chatbot import render_chatbot
 from admin.dashboard import render_admin_dashboard
 from admin.user_management import render_user_management
@@ -16,6 +16,7 @@ if st.session_state.get("role") != "admin":
     st.switch_page("app.py")
 
 render_sidebar()
+render_global_search_bar() # <--- ADD THIS LINE
 
 tab = st.session_state.get("current_tab", "Dashboard")
 if tab == "Dashboard":
