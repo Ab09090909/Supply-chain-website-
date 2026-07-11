@@ -11,16 +11,39 @@ def render_chatbot():
     # CSS for fixed floating button and chat interface
     st.markdown("""
     <style>
-    .floating-button-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
+    /* Make the button container float fixed at bottom-right */
+    div[data-testid="stHorizontalBlock"] > div:has(button[kind="secondary"][data-testid="baseButton-secondary"]) {
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        z-index: 9999 !important;
     }
     
+    /* Style the AI Assistant button to look like a pill */
+    button[kind="secondary"][data-testid="baseButton-secondary"] {
+        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%) !important;
+        color: white !important;
+        border: none !important;
+        padding: 15px 25px !important;
+        border-radius: 50px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+    
+    button[kind="secondary"][data-testid="baseButton-secondary"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6) !important;
+    }
+    
+    /* Chat popup card */
     .chat-popup-card {
         position: fixed;
-        bottom: 80px;
+        bottom: 90px;
         right: 20px;
         z-index: 9999;
         width: 350px;
@@ -45,7 +68,7 @@ def render_chatbot():
     }
     
     .chat-subtitle {
-        color: #a0a0a0;
+        color: #d0e8f5;
         font-size: 12px;
         margin-top: 5px;
     }
@@ -80,70 +103,24 @@ def render_chatbot():
         margin: 0 15px 15px 15px;
         flex-shrink: 0;
     }
-    
-    .ai-assistant-btn {
-        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
-        color: white;
-        border: none;
-        padding: 15px 25px;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .ai-assistant-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
-    }
-    
-    .exit-btn {
-        float: right;
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    
-    .exit-btn:hover {
-        background: rgba(255,0,0,0.6);
-    }
     </style>
     """, unsafe_allow_html=True)
 
     # If closed, show the floating "AI Assistant" button
     if not st.session_state.chatbot_visible:
-        st.markdown("""
-        <div class="floating-button-container">
-            <button class="ai-assistant-btn" onclick="document.getElementById('chat-toggle').click()">
-                <span>💬</span>
-                <span>AI Assistant</span>
-            </button>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Hidden Streamlit button to trigger the state change
-        if st.button("", key="chat-toggle", type="secondary"):
+        # Use a real Streamlit button — this is the only way clicks work reliably
+        if st.button("💬 AI Assistant", key="fab_open_chat", type="secondary"):
             st.session_state.chatbot_visible = True
             st.rerun()
         return
 
-    # Chat interface is open
+    # Chat interface is open — render the popup card
     st.markdown('<div class="chat-popup-card">', unsafe_allow_html=True)
     
-    # Header with Exit button
+    # Header
     st.markdown("""
     <div class="chat-header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span> EthioChain AI</span>
-        </div>
+        <div>💬 EthioChain AI</div>
         <div class="chat-subtitle">English / አማርኛ</div>
     </div>
     """, unsafe_allow_html=True)
@@ -165,34 +142,21 @@ def render_chatbot():
     # Chat input
     st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
     if prompt := st.chat_input("Ask me...", key="chat_input_field"):
-        # Display user message immediately
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # Add to history
         st.session_state.chat_history.append({"role": "user", "content": prompt})
             
-        # Get AI response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response = get_response(prompt, role)
                 st.markdown(response)
-                # Add assistant response to history
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Floating "AI Assistant" button (visible when chat is open too, for easy closing)
-    st.markdown("""
-    <div class="floating-button-container">
-        <button class="ai-assistant-btn" onclick="document.getElementById('chat-toggle-close').click()">
-            <span>💬</span>
-            <span>AI Assistant</span>
-        </button>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if st.button("", key="chat-toggle-close", type="secondary"):
+    # Keep the "AI Assistant" button visible at the bottom even when chat is open
+    if st.button("💬 AI Assistant", key="fab_close_chat", type="secondary"):
         st.session_state.chatbot_visible = False
         st.rerun()
 
@@ -202,9 +166,8 @@ def get_response(prompt, role):
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
-        return "️ GROQ_API_KEY not found in secrets."
+        return "⚠️ GROQ_API_KEY not found in secrets."
     
-    # Detailed system instructions for Groq
     system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
 STRICT RULES:
@@ -223,15 +186,12 @@ The current user is logged in as a: {role}.
 
 If the user greets you, welcome them warmly and briefly list 2-3 ways you can help them based on their role."""
 
-    # Build messages array
     messages = [{"role": "system", "content": system_prompt}]
     
-    # Add chat history (limit to last 8 to save tokens)
     for msg in st.session_state.chat_history[-8:]:
         if "role" in msg and "content" in msg:
             messages.append({"role": msg["role"], "content": msg["content"]})
     
-    # Ensure messages alternate properly
     cleaned_messages = [messages[0]]
     for i in range(1, len(messages)):
         if messages[i]["role"] != messages[i-1]["role"]:
