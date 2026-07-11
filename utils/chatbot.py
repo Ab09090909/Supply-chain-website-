@@ -1,65 +1,152 @@
 import streamlit as st
 import requests
 
-def render_chatbot():
-    """Renders the AI chatbot with button near welcome message."""
+def render_chatbot_button():
+    """Renders the Open Chat button at the top of the page."""
+    if "chatbot_visible" not in st.session_state:
+        st.session_state.chatbot_visible = False
+    
+    if not st.session_state.chatbot_visible:
+        if st.button("💬 Open Chat", key="top_chat_button", type="primary"):
+            st.session_state.chatbot_visible = True
+            st.rerun()
+
+def render_chatbot_window():
+    """Renders the floating chat window."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # If closed, show open button near welcome area
     if not st.session_state.chatbot_visible:
-        # Create a row with the button on the right side
-        col1, col2 = st.columns([6, 1])
-        with col2:
-            if st.button("💬 Open Chat", key="fab_open_chat", type="primary", use_container_width=True):
-                st.session_state.chatbot_visible = True
-                st.rerun()
         return
 
-    # Chat interface is open
-    st.markdown("### 💬 EthioChain AI")
+    # CSS for floating chat window
+    st.markdown("""
+    <style>
+    .chat-window-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        width: 400px;
+        max-width: 90vw;
+        max-height: 70vh;
+        background-color: #1a1d29;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        border: 1px solid #2E86C1;
+        z-index: 9999;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
     
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.caption("English / አማርኛ")
-    with col2:
-        if st.button("❌ Close Chat", key="chat_exit_btn"):
-            st.session_state.chatbot_visible = False
-            st.rerun()
-            
+    .chat-header {
+        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
+        color: white;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .chat-subtitle {
+        color: #d0e8f5;
+        font-size: 12px;
+        margin-top: 3px;
+    }
+    
+    .chat-messages {
+        background-color: #0f1117;
+        padding: 15px;
+        height: 400px;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+    
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+        background: #1a1d29;
+        border-radius: 10px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: #2E86C1;
+        border-radius: 10px;
+    }
+    
+    .chat-input-area {
+        padding: 15px;
+        background-color: #1a1d29;
+        border-top: 1px solid #2E86C1;
+    }
+    
+    .close-chat-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .close-chat-btn:hover {
+        background: rgba(255,0,0,0.6);
+    }
+    </style>
+    
+    <div class="chat-window-container">
+        <div class="chat-header">
+            <div>
+                <div>💬 EthioChain AI</div>
+                <div class="chat-subtitle">English / አማርኛ</div>
+            </div>
+            <button class="close-chat-btn" onclick="document.getElementById('close_chat_hidden').click()">❌</button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Hidden button to close chat
+    if st.button("", key="close_chat_hidden", type="secondary"):
+        st.session_state.chatbot_visible = False
+        st.rerun()
+    
+    # Chat messages area
+    st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
     role = st.session_state.get("role", "customer")
     
-    # Fixed-height container to prevent page expansion
-    chat_container = st.container(height=300, border=True)
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    with chat_container:
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-                
     # Chat input
+    st.markdown('<div class="chat-input-area">', unsafe_allow_html=True)
     if prompt := st.chat_input("Ask me...", key="chat_input_field"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-                
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = get_response(prompt, role)
-                    st.markdown(response)
-                    st.session_state.chat_history.append({"role": "assistant", "content": response})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+            
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = get_response(prompt, role)
+                st.markdown(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def get_response(prompt, role):
     """Calls Groq API with detailed system instructions."""
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
-        return "⚠️ GROQ_API_KEY not found in secrets."
+        return "️ GROQ_API_KEY not found in secrets."
     
     system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
@@ -114,11 +201,11 @@ If the user greets you, welcome them warmly and briefly list 2-3 ways you can he
                 error_msg = error_data.get("error", {}).get("message", resp.text)
                 return f"⚠️ API Error {resp.status_code}: {error_msg}"
             except:
-                return f"⚠️ API Error {resp.status_code}: {resp.text}"
+                return f"️ API Error {resp.status_code}: {resp.text}"
             
         return resp.json()["choices"][0]["message"]["content"]
         
     except requests.exceptions.Timeout:
-        return "️ Request timeout. Please try again."
+        return "⚠️ Request timeout. Please try again."
     except Exception as e:
-        return f"️ Error: {str(e)}"
+        return f"⚠️ Error: {str(e)}"
