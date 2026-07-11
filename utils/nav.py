@@ -33,7 +33,7 @@ def render_sidebar():
         st.rerun()
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Logout", use_container_width=True):
+    if st.sidebar.button(" Logout", use_container_width=True):
         from utils.auth import logout
         logout()
 
@@ -41,7 +41,6 @@ def render_global_search_bar():
     """Renders the floating pill-shaped search bar at the top of every page."""
     st.markdown("""
     <style>
-    /* Floating Container */
     .global-search-container {
         position: fixed;
         top: 15px;
@@ -51,9 +50,8 @@ def render_global_search_bar():
         max-width: 600px;
         z-index: 9999;
     }
-    /* The Pill Shape */
     .search-pill {
-        background-color: #2a2d36; /* Dark gray matching your image */
+        background-color: #2a2d36;
         border-radius: 50px;
         padding: 12px 20px;
         display: flex;
@@ -61,13 +59,11 @@ def render_global_search_bar():
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         border: 1px solid #3a3d46;
     }
-    /* Icons */
     .search-icon, .mic-icon {
         color: #a0a0a0;
         display: flex;
         align-items: center;
     }
-    /* Input Field */
     .search-input {
         background: transparent;
         border: none;
@@ -80,7 +76,6 @@ def render_global_search_bar():
     .search-input::placeholder {
         color: #a0a0a0;
     }
-    /* Push main content down so the floating bar doesn't cover it */
     .block-container {
         padding-top: 80px !important;
     }
@@ -89,12 +84,10 @@ def render_global_search_bar():
     <div class="global-search-container">
         <div class="search-pill">
             <div class="search-icon">
-                <!-- Magnifying Glass SVG -->
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
             <input type="text" class="search-input" placeholder="Search">
             <div class="mic-icon">
-                <!-- Microphone SVG -->
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
             </div>
         </div>
