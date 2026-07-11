@@ -2,15 +2,46 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the AI chatbot with a fixed height to prevent screen expansion."""
+    """Renders the AI chatbot with fixed position button at top."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # If closed, show open button
+    # CSS to position button at top-right
+    st.markdown("""
+    <style>
+    /* Position the Open Chat button at top-right */
+    div[data-testid="stButton"] button[kind="primary"][data-testid="baseButton-primary"] {
+        position: fixed !important;
+        top: 20px !important;
+        right: 20px !important;
+        z-index: 9999 !important;
+        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 24px !important;
+        border-radius: 50px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4) !important;
+    }
+    
+    div[data-testid="stButton"] button[kind="primary"][data-testid="baseButton-primary"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6) !important;
+    }
+    
+    /* Push content down so button doesn't overlap */
+    .block-container {
+        padding-top: 80px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # If closed, show open button at top
     if not st.session_state.chatbot_visible:
-        if st.button("💬 Open Chat", key="fab_open_chat"):
+        if st.button("💬 Open Chat", key="fab_open_chat", type="primary"):
             st.session_state.chatbot_visible = True
             st.rerun()
         return
@@ -20,7 +51,7 @@ def render_chatbot():
     
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.caption("English / አማር")
+        st.caption("English / አማርኛ")
     with col2:
         if st.button("❌ Exit", key="chat_exit_btn"):
             st.session_state.chatbot_visible = False
