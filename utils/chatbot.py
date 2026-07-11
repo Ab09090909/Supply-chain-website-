@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 def render_chatbot_in_sidebar():
-    """Renders the AI chatbot in the sidebar."""
+    """Renders the AI chatbot in the sidebar with a Clear button at the top."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
     if "sidebar_chat_collapsed" not in st.session_state:
@@ -11,17 +11,26 @@ def render_chatbot_in_sidebar():
     with st.sidebar:
         st.markdown("---")
         
-        # Chat header with collapse/expand toggle
-        col1, col2 = st.columns([5, 1])
+        # Chat header
+        st.markdown("### 💬 AI Assistant")
+        
+        # Top action buttons: Clear and Collapse/Expand
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
         with col1:
-            st.markdown("### 💬 AI Assistant")
-        with col2:
+            # Clear button at the top
+            if st.button("🗑️ Clear", key="clear_chat_btn", help="Clear chat history", use_container_width=True):
+                st.session_state.chat_history = []
+                st.rerun()
+                
+        with col3:
+            # Collapse/Expand button
             if st.session_state.sidebar_chat_collapsed:
                 if st.button("➕", key="expand_chat", help="Expand chat"):
                     st.session_state.sidebar_chat_collapsed = False
                     st.rerun()
             else:
-                if st.button("➖", key="collapse_chat", help="Collapse chat"):
+                if st.button("", key="collapse_chat", help="Collapse chat"):
                     st.session_state.sidebar_chat_collapsed = True
                     st.rerun()
         
@@ -36,7 +45,7 @@ def render_chatbot_in_sidebar():
             
             with chat_container:
                 if not st.session_state.chat_history:
-                    st.info(" Welcome! Ask me anything about EthioChain.")
+                    st.info("👋 Welcome! Ask me anything about EthioChain.")
                 
                 for message in st.session_state.chat_history:
                     with st.chat_message(message["role"]):
@@ -121,13 +130,13 @@ If the user greets you, welcome them warmly and briefly list 2-3 ways you can he
             try:
                 error_data = resp.json()
                 error_msg = error_data.get("error", {}).get("message", resp.text)
-                return f"⚠️ API Error {resp.status_code}: {error_msg}"
+                return f"️ API Error {resp.status_code}: {error_msg}"
             except:
-                return f"⚠️ API Error {resp.status_code}: {resp.text}"
+                return f"️ API Error {resp.status_code}: {resp.text}"
             
         return resp.json()["choices"][0]["message"]["content"]
         
     except requests.exceptions.Timeout:
-        return "️ Request timeout. Please try again."
+        return "⚠️ Request timeout. Please try again."
     except Exception as e:
-        return f"️ Error: {str(e)}"
+        return f"⚠️ Error: {str(e)}"
