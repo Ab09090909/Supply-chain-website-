@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.nav import render_sidebar, render_global_search_bar
+from utils.nav import render_sidebar
 from utils.chatbot import render_chatbot
 from admin.dashboard import render_admin_dashboard
 from admin.user_management import render_user_management
@@ -12,11 +12,13 @@ from admin.reports import render_reports
 st.set_page_config(page_title="Admin Dashboard", page_icon="🛡️", layout="wide")
 
 if st.session_state.get("role") != "admin":
-    st.error(" Access Denied. Admin privileges required.")
+    st.error("⛔ Access Denied. Admin privileges required.")
     st.switch_page("app.py")
 
 render_sidebar()
-render_global_search_bar() # <--- ADD THIS LINE
+
+# AI Assistant button/chat at the top
+render_chatbot()
 
 tab = st.session_state.get("current_tab", "Dashboard")
 if tab == "Dashboard":
@@ -33,5 +35,3 @@ elif tab == "Settings":
     render_system_settings()
 elif tab == "Reports":
     render_reports()
-
-render_chatbot()
