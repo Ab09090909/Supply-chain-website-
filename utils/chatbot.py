@@ -2,50 +2,140 @@ import streamlit as st
 import requests
 
 def render_chatbot_tab():
-    """Renders the AI chatbot as a full page tab."""
+    """Renders the AI chatbot as a fixed-position tab."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    st.title(" EthioChain AI Assistant")
-    st.caption("English / አማርኛ | Powered by Groq")
-    st.markdown("---")
+    # CSS for fixed position chat window
+    st.markdown("""
+    <style>
+    .fixed-chat-container {
+        position: fixed !important;
+        top: 100px !important;
+        right: 20px !important;
+        width: 400px !important;
+        max-width: 90vw !important;
+        max-height: 70vh !important;
+        z-index: 9998 !important;
+        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%) !important;
+        border-radius: 16px !important;
+        border: 2px solid #2E86C1 !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7) !important;
+        overflow: hidden !important;
+    }
+    
+    .fixed-chat-header {
+        background: #2E86C1 !important;
+        color: white !important;
+        padding: 15px 20px !important;
+    }
+    
+    .fixed-chat-title {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        margin: 0 !important;
+    }
+    
+    .fixed-chat-subtitle {
+        font-size: 12px !important;
+        color: #d0e8f5 !important;
+        margin-top: 5px !important;
+    }
+    
+    .fixed-chat-messages {
+        height: 400px !important;
+        overflow-y: auto !important;
+        padding: 15px !important;
+        background: #0f1117 !important;
+    }
+    
+    .fixed-chat-messages::-webkit-scrollbar {
+        width: 6px !important;
+    }
+    
+    .fixed-chat-messages::-webkit-scrollbar-thumb {
+        background: #2E86C1 !important;
+        border-radius: 10px !important;
+    }
+    
+    .fixed-chat-input {
+        padding: 15px !important;
+        background: #1a1d29 !important;
+        border-top: 1px solid #2E86C1 !important;
+    }
+    
+    .clear-btn {
+        background: rgba(255,255,255,0.2) !important;
+        color: white !important;
+        border: none !important;
+        padding: 8px 15px !important;
+        border-radius: 5px !important;
+        cursor: pointer !important;
+    }
+    
+    .clear-btn:hover {
+        background: rgba(255,0,0,0.6) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    role = st.session_state.get("role", "customer")
-
-    # Chat messages area (large height for full tab experience)
-    chat_container = st.container(height=500, border=True)
-
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.info("👋 Welcome! Ask me anything about the EthioChain supply chain.")
-
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-    # Action buttons row
-    col1, col2 = st.columns([1, 5])
+    st.markdown('<div class="fixed-chat-container">', unsafe_allow_html=True)
+    
+    # Header
+    st.markdown("""
+    <div class="fixed-chat-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div class="fixed-chat-title">💬 EthioChain AI Assistant</div>
+                <div class="fixed-chat-subtitle">English / አማርኛ</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Clear button row
+    col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("🗑️ Clear Chat", use_container_width=True):
+        if st.button("🗑️ Clear", key="clear_chat_fixed", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
-
+    
+    role = st.session_state.get("role", "customer")
+    
+    # Chat messages area
+    st.markdown('<div class="fixed-chat-messages">', unsafe_allow_html=True)
+    
+    if not st.session_state.chat_history:
+        st.markdown('<div style="text-align: center; color: #666; padding: 20px;">👋 Welcome! Ask me anything about EthioChain supply chain.</div>', unsafe_allow_html=True)
+    
+    for message in st.session_state.chat_history:
+        if message["role"] == "user":
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-end; margin: 10px 0;">
+                <div style="background: #2E86C1; color: white; padding: 10px 15px; border-radius: 18px 18px 4px 18px; max-width: 80%; word-wrap: break-word;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-start; margin: 10px 0;">
+                <div style="background: #2a2d36; color: #e8eaed; padding: 10px 15px; border-radius: 18px 18px 18px 4px; max-width: 80%; word-wrap: break-word;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     # Chat input
-    if prompt := st.chat_input("Type your message...", key="tab_chat_input"):
+    st.markdown('<div class="fixed-chat-input">', unsafe_allow_html=True)
+    
+    if prompt := st.chat_input("Type your message...", key="fixed_chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = get_response(prompt, role)
-                    st.markdown(response)
-
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
         st.rerun()
+    
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 def get_response(prompt, role):
     """Calls Groq API with detailed system instructions."""
