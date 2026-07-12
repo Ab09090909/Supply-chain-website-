@@ -2,17 +2,15 @@
 import streamlit as st
 import requests
 
-def render_chatbot_tab():
-    """
-    Renders the floating AI chatbot. 
-    Reads role from session state and uses OpenRouter API.
-    """
+def render_chatbot():
+    """Renders the floating AI chatbot at the bottom of the page."""
+    
     # Initialize chat history
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
     # Use an expander at the bottom to simulate a floating panel
-    with st.expander(" EthioChain AI Assistant", expanded=False):
+    with st.expander("💬 EthioChain AI Assistant", expanded=False):
         st.caption("Ask about supply chain, prices, forecasts, or fraud checks. Supports English & Amharic.")
         
         # Display chat history
@@ -69,6 +67,6 @@ def render_chatbot_tab():
                         st.session_state.chat_messages.append({"role": "assistant", "content": ai_response})
                         
                     except requests.exceptions.Timeout:
-                        st.error("️ The AI took too long to respond. Please try again.")
+                        st.error("⏳ The AI took too long to respond. Please try again.")
                     except Exception as e:
                         st.error(f"❌ Failed to connect to AI: {str(e)}")
