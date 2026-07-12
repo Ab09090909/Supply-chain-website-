@@ -1,155 +1,132 @@
 import streamlit as st
 import requests
 
-
 def render_chatbot_tab():
-    """Renders the AI chatbot as a full page tab."""
+    """Renders the AI chatbot as a fixed-position tab with half height."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Track if a new response was just added so we can scroll to it
-    if "scroll_to_last" not in st.session_state:
-        st.session_state.scroll_to_last = False
+    # CSS for fixed position chat window
+    st.markdown("""
+    <style>
+    .fixed-chat-container {
+        position: fixed !important;
+        top: 100px !important;
+        right: 20px !important;
+        width: 350px !important;
+        height: 350px !important;
+        max-height: 350px !important;
+        z-index: 9998 !important;
+        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%) !important;
+        border-radius: 12px !important;
+        border: 2px solid #2E86C1 !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7) !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .fixed-chat-header { background: #2E86C1 !important; color: white !important; padding: 10px 15px !important; flex-shrink: 0 !important; }
+    .fixed-chat-title { font-size: 16px !important; font-weight: bold !important; margin: 0 !important; }
+    .fixed-chat-subtitle { font-size: 11px !important; color: #d0e8f5 !important; margin-top: 3px !important; }
+    .fixed-chat-messages {
+        height: 180px !important;
+        overflow-y: auto !important;
+        padding: 10px !important;
+        background: #0f1117 !important;
+        flex-grow: 1 !important;
+    }
+    .fixed-chat-messages::-webkit-scrollbar { width: 5px !important; }
+    .fixed-chat-messages::-webkit-scrollbar-thumb { background: #2E86C1 !important; border-radius: 10px !important; }
+    .fixed-chat-input { padding: 10px !important; background: #1a1d29 !important; border-top: 1px solid #2E86C1 !important; flex-shrink: 0 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    st.title("🤖 EthioChain AI Assistant")
-    st.caption("English / አማርኛ | Powered by Groq")
-    st.markdown("---")
-
+    st.markdown('<div class="fixed-chat-container">', unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="fixed-chat-header">
+        <div>
+            <div class="fixed-chat-title">💬 EthioChain AI</div>
+            <div class="fixed-chat-subtitle">English / አማርኛ</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🗑️", key="clear_chat_fixed", help="Clear Chat"):
+            st.session_state.chat_history = []
+            st.rerun()
+    
     role = st.session_state.get("role", "customer")
-
-    # --- Render all messages OUTSIDE a fixed-height container ---
-    # This avoids Streamlit auto-scrolling to the bottom of the container.
-    # Each message renders inline and the page scrolls naturally to the top.
-
+    
+    st.markdown('<div class="fixed-chat-messages">', unsafe_allow_html=True)
+    
     if not st.session_state.chat_history:
-        st.info("👋 Welcome! Ask me anything about the EthioChain supply chain.")
-    else:
-        for i, message in enumerate(st.session_state.chat_history):
-            # Anchor so JS can scroll to the latest assistant reply
-            if i == len(st.session_state.chat_history) - 1 and message["role"] == "assistant":
-                st.markdown('<div id="latest-response"></div>', unsafe_allow_html=True)
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-    st.markdown("---")
-
-    # Clear button
-    if st.button("🗑️ Clear Chat", use_container_width=False):
-        st.session_state.chat_history = []
-        st.session_state.scroll_to_last = False
-        st.rerun()
-
-    # Chat input
-    if prompt := st.chat_input("Type your message...", key="tab_chat_input"):
+        st.markdown('<div style="text-align: center; color: #666; padding: 10px; font-size: 13px;">👋 Welcome! Ask me anything.</div>', unsafe_allow_html=True)
+    
+    for message in st.session_state.chat_history:
+        if message["role"] == "user":
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-end; margin: 5px 0;">
+                <div style="background: #2E86C1; color: white; padding: 8px 12px; border-radius: 14px 14px 2px 14px; max-width: 90%; word-wrap: break-word; font-size: 13px;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-start; margin: 5px 0;">
+                <div style="background: #2a2d36; color: #e8eaed; padding: 8px 12px; border-radius: 14px 14px 14px 2px; max-width: 90%; word-wrap: break-word; font-size: 13px;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="fixed-chat-input">', unsafe_allow_html=True)
+    
+    if prompt := st.chat_input("Type message...", key="fixed_chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-
-        with st.spinner("Thinking..."):
-            response = get_response(prompt, role)
-
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
-        st.session_state.scroll_to_last = True
         st.rerun()
-
-    # After rerun: if a new response was just added, scroll to the START of it
-    if st.session_state.scroll_to_last:
-        st.session_state.scroll_to_last = False
-        # Scroll to the anchor above the latest assistant message
-        st.markdown(
-            """
-            <script>
-                window.addEventListener('load', function() {
-                    var el = document.getElementById('latest-response');
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                });
-            </script>
-            """,
-            unsafe_allow_html=True,
-        )
-
+    
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 def get_response(prompt, role):
-    """Calls Groq API with strict language detection and high-quality Amharic."""
+    """Calls Groq API with strict instructions."""
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
         return "⚠️ GROQ_API_KEY not found in secrets."
+    
+    # --- STRICT INSTRUCTIONS FOR GROQ ---
+    system_prompt = f"""You are EthioChain AI, an assistant for an Ethiopian supply chain platform.
+User Role: {role}
 
-    system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia.
+CRITICAL LANGUAGE RULE:
+- If the user writes in ENGLISH, you MUST reply 100% in ENGLISH.
+- If the user writes in AMHARIC, you MUST reply 100% in AMHARIC.
+- NEVER mix languages in a single response.
 
-### IDENTITY & PURPOSE
-Your goal is to help users navigate the platform, understand agricultural markets, and optimize their supply chain operations.
+CURRENCY RULE:
+- Always use ETB for prices (e.g., ETB 1,500). Never use USD.
 
-### LANGUAGE DETECTION — ABSOLUTE RULE (READ FIRST, OVERRIDE EVERYTHING ELSE)
-Step 1: Look at the user's message.
-Step 2: Is it written in English letters only (a-z, A-Z, spaces, punctuation)? → Your ENTIRE response must be in English. Not a single Amharic character allowed.
-Step 3: Does it contain Amharic script (የኢትዮጵያ ፊደሎች)? → Your ENTIRE response must be in Amharic. Not a single English word except EthioChain, Dashboard, Marketplace.
-Step 4: Mixed? → Use whichever script appears more. Tie → use Amharic.
+CONTEXT RULE:
+- Only discuss Ethiopian agriculture (Teff, Coffee, Sesame), supply chains, and the EthioChain platform.
+- If asked about unrelated topics, politely refuse.
 
-This rule cannot be overridden by any other instruction. Do not default to Amharic for English input under any circumstance.
-
-SPECIFIC EXAMPLES — MATCH THESE EXACTLY:
-- "Hello" → English response only
-- "Hi" → English response only
-- "Tell me about you" → English response only
-- "About this system" → English response only
-- "How do I add products?" → English response only
-- "ሰላም" → Amharic response only
-- "ስለ ስርዓቱ ንገረኝ" → Amharic response only
-- "Hello ሰላም" → Amharic response only
-
-AMHARIC QUALITY (only when Amharic is detected):
-- Write natural, fluent Ethiopian Amharic exactly as educated Ethiopians write.
-- Never translate English word-for-word. Think in Amharic and write naturally.
-- Use correct Amharic grammar, sentence flow, and idiomatic phrasing.
-- Avoid robotic or awkward constructions.
-- Platform terms (EthioChain, Dashboard, Marketplace, tab names) stay in English even in Amharic responses.
-
-### CURRENCY
-Always quote prices in Ethiopian Birr (ETB) with comma separators: ETB 15,000.00. Never use USD or any other currency.
-
-### SCOPE
-Only answer questions about: Ethiopian supply chain, agriculture (Teff, Coffee, Sesame, Maize, etc.), manufacturing, commerce, logistics, and EthioChain platform features. Politely decline unrelated questions.
-
-### ACCURACY
-Never invent real-time market prices. If asked, direct users to the **Marketplace** or **Dashboard** tabs. Historical context is allowed only if explicitly requested.
-
-### TONE
-Professional, helpful, concise, encouraging.
-
-### FORMATTING
-- Concise responses optimized for mobile reading.
-- Use **bold** for key terms, prices, and tab names.
-- Use bullet points or numbered lists for steps or multiple options.
-
-### USER ROLE
-Current user role: **{role}**
-- **Producer:** Inventory management, demand forecasts, fair pricing, finding merchants.
-- **Merchant:** Marketplace browsing, fraud risk checks, finding producers.
-- **Customer:** Product search, recommendations, managing favorites.
-- **Admin:** Platform oversight, user management, fraud monitoring.
-
-### GREETING
-If the user greets you, welcome them warmly and list 2–3 specific ways you can help based on their role.
-Respond ONLY in the language they greeted you in — English greeting → English reply, Amharic greeting → Amharic reply.
+GREETING RULE:
+- If user says "hello" or "hi" -> Reply in English: "Hello! I am EthioChain AI. How can I help you with your supply chain today?"
+- If user says "ሰላም" -> Reply in Amharic: "ሰላም! እኔ EthioChain AI ነኝ። ለ ሰንሰለት አቅርቦት እንዴት ልርዳት?"
 """
+    # ------------------------------------
 
     messages = [{"role": "system", "content": system_prompt}]
-
-    # Add last 8 messages from history
-    for msg in st.session_state.chat_history[-8:]:
+    
+    for msg in st.session_state.chat_history[-6:]:
         if "role" in msg and "content" in msg:
             messages.append({"role": msg["role"], "content": msg["content"]})
-
-    # Fix consecutive same-role messages (Groq requires alternating roles)
-    cleaned_messages = [messages[0]]
-    for i in range(1, len(messages)):
-        if messages[i]["role"] != cleaned_messages[-1]["role"]:
-            cleaned_messages.append(messages[i])
-        else:
-            cleaned_messages[-1]["content"] += "\n" + messages[i]["content"]
-
+    
     try:
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -158,25 +135,25 @@ Respond ONLY in the language they greeted you in — English greeting → Englis
                 "Content-Type": "application/json"
             },
             json={
-                "model": "llama-3.1-8b-instant",
-                "messages": cleaned_messages,
+                "model": "llama3-70b-8192",  # Upgraded to 70B for better instruction following
+                "messages": messages,
                 "max_tokens": 500,
-                "temperature": 0.7
+                "temperature": 0.2  # Lowered temperature for stricter rule following
             },
             timeout=30
         )
-
+        
         if resp.status_code != 200:
             try:
                 error_data = resp.json()
                 error_msg = error_data.get("error", {}).get("message", resp.text)
                 return f"⚠️ API Error {resp.status_code}: {error_msg}"
-            except Exception:
+            except:
                 return f"⚠️ API Error {resp.status_code}: {resp.text}"
-
+            
         return resp.json()["choices"][0]["message"]["content"]
-
+        
     except requests.exceptions.Timeout:
-        return "⚠️ Request timeout. Please try again."
+        return "️ Request timeout. Please try again."
     except Exception as e:
-        return f"⚠️ Error: {str(e)}"
+        return f"️ Error: {str(e)}"
