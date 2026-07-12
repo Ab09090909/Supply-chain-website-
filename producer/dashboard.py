@@ -4,16 +4,11 @@ import plotly.graph_objects as go
 from utils.db import supabase
 from utils.constants import format_etb, CATEGORIES, SECTORS
 from utils.nav import render_sidebar
-from utils.chatbot import render_chatbot
+# Note: We import it just in case, but we don't call it here to avoid duplicates
+from utils.chatbot import render_chatbot 
 from engines.demand import get_demand_forecast
 
 def main():
-    st.set_page_config(
-        page_title="Producer Dashboard - EthioChain",
-        page_icon="🏭",
-        layout="wide"
-    )
-    
     # Verify producer role
     if "role" not in st.session_state or st.session_state.role != "producer":
         st.error("Access denied. Please login as a producer.")
@@ -37,7 +32,7 @@ def main():
         search_query = st.text_input(
             "🔍 Search Products",
             placeholder="Search by name, category, or sector...",
-            label_visibility="visible",  # Make sure label shows
+            label_visibility="visible",
             key="product_search"
         )
     
@@ -99,7 +94,7 @@ def main():
     
     col1, col2, col3 = st.columns(3)
     col1.metric("📦 Active Listings", active_listings)
-    col2.metric("🛒 Total Orders", total_orders)
+    col2.metric(" Total Orders", total_orders)
     col3.metric("💰 Total Revenue", format_etb(total_revenue))
     
     # ==========================================
@@ -109,7 +104,6 @@ def main():
     st.subheader("📦 Your Products")
     
     if filtered_products:
-        # Display in grid
         for i in range(0, len(filtered_products), 2):
             cols = st.columns(2)
             for j, col in enumerate(cols):
@@ -125,7 +119,7 @@ def main():
                             status_icon = "🟢" if product.get("status") == "active" else "🔴"
                             st.write(f"{status_icon} {product.get('status', 'unknown').capitalize()}")
     elif search_query.strip():
-        st.info(f"🔍 No products found matching '{search_query}'")
+        st.info(f" No products found matching '{search_query}'")
     else:
         st.info("📦 You haven't added any products yet. Click the Inventory tab to add your first product!")
     
@@ -166,8 +160,5 @@ def main():
     else:
         st.info("Add products to see demand forecasts")
     
-    # Chatbot
-    render_chatbot()
-
-if __name__ == "__main__":
-    main()
+    # NOTE: We do NOT call render_chatbot() here. 
+    # It is called in pages/1_producer.py to prevent duplicate chatbots.
