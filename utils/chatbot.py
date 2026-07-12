@@ -1,192 +1,50 @@
 import streamlit as st
 import requests
 
-def render_chatbot():
-    """Renders the floating AI chatbot at the bottom of the screen."""
-    if "chatbot_visible" not in st.session_state:
-        st.session_state.chatbot_visible = False
+def render_chatbot_tab():
+    """Renders the AI chatbot as a full page tab."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for floating chatbot at bottom
-    st.markdown("""
-    <style>
-    /* Floating chat container - fixed at bottom right */
-    .floating-chat-container {
-        position: fixed !important;
-        bottom: 20px !important;
-        right: 20px !important;
-        width: 350px !important;
-        max-width: 90vw !important;
-        z-index: 9999 !important;
-    }
-    
-    /* Chat window styling */
-    .chat-window {
-        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
-        border-radius: 16px;
-        border: 2px solid #2E86C1;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-        overflow: hidden;
-        margin-bottom: 10px;
-    }
-    
-    /* Chat header */
-    .chat-header {
-        background: #2E86C1;
-        color: white;
-        padding: 12px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .chat-title {
-        font-size: 16px;
-        font-weight: bold;
-    }
-    
-    .chat-subtitle {
-        font-size: 11px;
-        color: #d0e8f5;
-    }
-    
-    /* Chat messages area */
-    .chat-messages {
-        height: 300px;
-        overflow-y: auto;
-        padding: 15px;
-        background: #0f1117;
-    }
-    
-    .chat-messages::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .chat-messages::-webkit-scrollbar-thumb {
-        background: #2E86C1;
-        border-radius: 10px;
-    }
-    
-    /* Exit button */
-    .exit-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .exit-btn:hover {
-        background: rgba(255,0,0,0.6);
-    }
-    
-    /* Floating open button */
-    .open-chat-btn {
-        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
-        color: white;
-        border: none;
-        padding: 15px 25px;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-    }
-    
-    .open-chat-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
-    }
-    
-    /* Input area */
-    .chat-input-area {
-        padding: 15px;
-        background: #1a1d29;
-        border-top: 1px solid #2E86C1;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.title(" EthioChain AI Assistant")
+    st.caption("English / አማርኛ | Powered by Groq")
+    st.markdown("---")
 
-    # If chatbot is closed, show floating open button at bottom
-    if not st.session_state.chatbot_visible:
-        st.markdown("""
-        <div class="floating-chat-container">
-            <button class="open-chat-btn" onclick="document.getElementById('open_chat_hidden').click()">
-                <span>💬</span>
-                <span>AI Assistant</span>
-            </button>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Hidden button to trigger open
-        if st.button("", key="open_chat_hidden", type="secondary"):
-            st.session_state.chatbot_visible = True
-            st.rerun()
-        return
-
-    # Chatbot is open - show floating window at bottom
-    st.markdown("""
-    <div class="floating-chat-container">
-        <div class="chat-window">
-            <div class="chat-header">
-                <div>
-                    <div class="chat-title">💬 EthioChain AI</div>
-                    <div class="chat-subtitle">English / አማርኛ</div>
-                </div>
-                <button class="exit-btn" onclick="document.getElementById('close_chat_hidden').click()">✕</button>
-            </div>
-            <div class="chat-messages">
-    """, unsafe_allow_html=True)
-    
-    # Display chat messages
     role = st.session_state.get("role", "customer")
-    
-    if not st.session_state.chat_history:
-        st.markdown('<div style="text-align: center; color: #666; padding: 20px;">Welcome! Ask me anything about EthioChain supply chain.</div>', unsafe_allow_html=True)
-    
-    for message in st.session_state.chat_history:
-        if message["role"] == "user":
-            st.markdown(f"""
-            <div style="display: flex; justify-content: flex-end; margin: 10px 0;">
-                <div style="background: #2E86C1; color: white; padding: 10px 15px; border-radius: 18px 18px 4px 18px; max-width: 80%; word-wrap: break-word;">
-                    {message["content"]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style="display: flex; justify-content: flex-start; margin: 10px 0;">
-                <div style="background: #2a2d36; color: #e8eaed; padding: 10px 15px; border-radius: 18px 18px 18px 4px; max-width: 80%; word-wrap: break-word;">
-                    {message["content"]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Chat input area
-    st.markdown('<div class="chat-input-area">', unsafe_allow_html=True)
-    
-    if prompt := st.chat_input("Type your message...", key="chat_input"):
+
+    # Chat messages area (large height for full tab experience)
+    chat_container = st.container(height=500, border=True)
+
+    with chat_container:
+        if not st.session_state.chat_history:
+            st.info("👋 Welcome! Ask me anything about the EthioChain supply chain.")
+
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    # Action buttons row
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        if st.button("🗑️ Clear Chat", use_container_width=True):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    # Chat input
+    if prompt := st.chat_input("Type your message...", key="tab_chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        st.rerun()
-    
-    st.markdown('</div></div></div>', unsafe_allow_html=True)
-    
-    # Hidden button to close chat
-    if st.button("", key="close_chat_hidden", type="secondary"):
-        st.session_state.chatbot_visible = False
+
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+        with chat_container:
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = get_response(prompt, role)
+                    st.markdown(response)
+
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
         st.rerun()
 
 def get_response(prompt, role):
