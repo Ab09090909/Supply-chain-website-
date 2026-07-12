@@ -1,7 +1,6 @@
 # producer/dashboard.py
 import streamlit as st
 import plotly.graph_objects as go
-import pandas as pd
 from utils.db import supabase
 from utils.constants import format_etb, CATEGORIES, SECTORS
 from utils.nav import render_sidebar
@@ -24,225 +23,150 @@ def main():
     render_sidebar()
     
     # Main content
-    st.title(" Producer Dashboard")
+    st.title("🏭 Producer Dashboard")
     st.markdown(f"**Welcome back, {st.session_state.name}** | 📍 {st.session_state.city}")
     st.write("Here is an overview of your production and sales performance.")
     
     # ==========================================
-    # 🔍 PRODUCT SEARCH BAR
+    # 🔍 SEARCH BAR - ALWAYS VISIBLE
     # ==========================================
     st.markdown("---")
-    st.subheader("🔍 Search Your Products")
+    search_col1, search_col2 = st.columns([3, 1])
     
-    col1, col2 = st.columns([4, 1])
-    with col1:
+    with search_col1:
         search_query = st.text_input(
-            "Search by product name, category, or sector",
-            placeholder="e.g., Teff, Grains, Agriculture...",
-            label_visibility="collapsed"
+            "🔍 Search Products",
+            placeholder="Search by name, category, or sector...",
+            label_visibility="visible",  # Make sure label shows
+            key="product_search"
         )
-    with col2:
+    
+    with search_col2:
         status_filter = st.selectbox(
             "Status",
             ["All", "Active", "Inactive"],
-            label_visibility="collapsed"
+            key="status_filter"
         )
     
-    # Fetch and filter products
+    # Fetch all products
     try:
         response = supabase.table("products")\
             .select("*")\
             .eq("producer_id", st.session_state.user_id)\
             .execute()
-        
-        all_products = response.data
-        
-        # Apply filters
-        filtered_products = all_products
-        
-        if status_filter != "All":
-            status_bool = status_filter.lower() == "active"
-            filtered_products = [p for p in filtered_products if p.get("status") == status_bool]
-        
-        if search_query:
-            query_lower = search_query.lower()
-            filtered_products = [
-                p for p in filtered_products 
-                if query_lower in p.get("name", "").lower() 
-                or query_lower in p.get("category", "").lower()
-                or query_lower in p.get("sector", "").lower()
-            ]
-        
+        all_products = response.data or []
     except Exception as e:
         st.error(f"Error loading products: {str(e)}")
-        filtered_products = []
         all_products = []
     
-    # Display search results
-    if search_query or status_filter != "All":
-        st.markdown(f"**Found {len(filtered_products)} product(s)**")
+    # Apply filters
+    filtered_products = all_products.copy()
+    
+    if status_filter != "All":
+        status_value = status_filter.lower() == "active"
+        filtered_products = [p for p in filtered_products if p.get("status") == status_value]
+    
+    if search_query.strip():
+        query = search_query.lower().strip()
+        filtered_products = [
+            p for p in filtered_products 
+            if (query in p.get("name", "").lower() or
+                query in p.get("category", "").lower() or
+                query in p.get("sector", "").lower())
+        ]
+    
+    # Show search results count
+    if search_query.strip() or status_filter != "All":
+        st.caption(f"Found {len(filtered_products)} product(s)")
     
     # ==========================================
-    # DASHBOARD METRICS
+    # METRICS CARD
     # ==========================================
     st.markdown("---")
-    st.subheader(" Overview")
     
-    # Calculate metrics from all products
     active_listings = len([p for p in all_products if p.get("status") == "active"])
-    total_products = len(all_products)
     
-    # Calculate total revenue from orders
     try:
-        orders_response = supabase.table("orders")\
-            .select("total_price_etb")\
+        orders = supabase.table("orders")\
+            .select("total_price_etb, status")\
             .eq("seller_id", st.session_state.user_id)\
-            .eq("status", "Completed")\
-            .execute()
-        total_revenue = sum(order.get("total_price_etb", 0) for order in orders_response.data)
-    except Exception:
+            .execute().data or []
+        total_orders = len(orders)
+        total_revenue = sum(o.get("total_price_etb", 0) for o in orders if o.get("status") == "Completed")
+    except:
+        total_orders = 0
         total_revenue = 0
     
-    # Calculate total orders
-    try:
-        total_orders = len(supabase.table("orders")\
-            .select("id")\
-            .eq("seller_id", st.session_state.user_id)\
-            .execute().data)
-    except Exception:
-        total_orders = 0
-    
-    # Display metrics in a card
-    with st.container():
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric(
-                label="📦 Active Listings",
-                value=active_listings,
-                delta=None
-            )
-        with col2:
-            st.metric(
-                label="🛒 Total Orders",
-                value=total_orders,
-                delta=None
-            )
-        with col3:
-            st.metric(
-                label="💰 Total Revenue",
-                value=format_etb(total_revenue),
-                delta=None
-            )
+    col1, col2, col3 = st.columns(3)
+    col1.metric("📦 Active Listings", active_listings)
+    col2.metric("🛒 Total Orders", total_orders)
+    col3.metric("💰 Total Revenue", format_etb(total_revenue))
     
     # ==========================================
-    # SEARCH RESULTS DISPLAY
-    # ==========================================
-    if filtered_products:
-        st.markdown("---")
-        st.subheader("📦 Your Products")
-        
-        # Display products in expandable sections
-        for product in filtered_products:
-            with st.expander(f"📦 {product.get('name')} - {format_etb(product.get('price_etb', 0))}", expanded=False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Category:** {product.get('category')}")
-                    st.write(f"**Sector:** {product.get('sector')}")
-                    st.write(f"**Quantity:** {product.get('quantity')} {product.get('unit')}")
-                with col2:
-                    st.write(f"**Location:** {product.get('city')}")
-                    status_emoji = "🟢" if product.get("status") == "active" else "🔴"
-                    st.write(f"**Status:** {status_emoji} {product.get('status', 'unknown')}")
-                    st.write(f"**Created:** {product.get('created_at', 'N/A')[:10] if product.get('created_at') else 'N/A'}")
-                
-                # Quick actions
-                col_edit, col_delete = st.columns(2)
-                with col_edit:
-                    if st.button("️ Edit Product", key=f"edit_{product.get('id')}"):
-                        st.session_state.selected_product = product
-                        st.switch_page("producer/inventory.py")
-                with col_delete:
-                    if st.button("🗑️ Deactivate", key=f"deact_{product.get('id')}"):
-                        try:
-                            supabase.table("products")\
-                                .update({"status": "inactive"})\
-                                .eq("id", product.get('id'))\
-                                .execute()
-                            st.success("Product deactivated!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
-    
-    elif search_query:
-        st.info(f"No products found matching '{search_query}'. Try a different search term.")
-    
-    # ==========================================
-    # DEMAND FORECAST CHART
+    # DISPLAY PRODUCTS
     # ==========================================
     st.markdown("---")
-    st.subheader(" 30-Day Demand Forecast")
+    st.subheader("📦 Your Products")
+    
+    if filtered_products:
+        # Display in grid
+        for i in range(0, len(filtered_products), 2):
+            cols = st.columns(2)
+            for j, col in enumerate(cols):
+                if i + j < len(filtered_products):
+                    product = filtered_products[i + j]
+                    with col:
+                        with st.container(border=True):
+                            st.markdown(f"**{product.get('name', 'Unnamed')}**")
+                            st.caption(f"{product.get('category')} • {product.get('sector')}")
+                            st.markdown(f"**💰 {format_etb(product.get('price_etb', 0))}**")
+                            st.write(f"📦 {product.get('quantity')} {product.get('unit')}")
+                            st.write(f"📍 {product.get('city')}")
+                            status_icon = "🟢" if product.get("status") == "active" else "🔴"
+                            st.write(f"{status_icon} {product.get('status', 'unknown').capitalize()}")
+    elif search_query.strip():
+        st.info(f"🔍 No products found matching '{search_query}'")
+    else:
+        st.info("📦 You haven't added any products yet. Click the Inventory tab to add your first product!")
+    
+    # ==========================================
+    # DEMAND FORECAST
+    # ==========================================
+    st.markdown("---")
+    st.subheader("📊 30-Day Demand Forecast")
     
     if all_products:
-        # Get categories from producer's products
-        categories = list(set([p.get("category") for p in all_products if p.get("category")]))
-        
+        categories = list(set(p.get("category") for p in all_products if p.get("category")))
         if categories:
-            selected_category = st.selectbox(
-                "Select product category for forecast",
-                options=categories,
-                index=0
-            )
-            
-            # Get sector from first product in that category
-            sector = next((p.get("sector") for p in all_products if p.get("category") == selected_category), SECTORS[0])
-            
+            selected_cat = st.selectbox("Select category", categories, key="forecast_cat")
             try:
-                forecast_data = get_demand_forecast(
-                    category=selected_category,
-                    sector=sector,
+                forecast = get_demand_forecast(
+                    category=selected_cat,
+                    sector=SECTORS[0],
                     region=st.session_state.city
                 )
-                
-                if forecast_data and len(forecast_data) > 0:
+                if forecast:
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
-                        x=list(range(1, len(forecast_data) + 1)),
-                        y=forecast_data,
+                        x=list(range(1, len(forecast) + 1)),
+                        y=forecast,
                         mode='lines+markers',
-                        name='Predicted Demand',
-                        line=dict(color='#00A859', width=3),
-                        marker=dict(size=8, color='#00A859')
+                        line=dict(color='#00A859', width=3)
                     ))
-                    
                     fig.update_layout(
-                        title=f"Demand Forecast for {selected_category} in {st.session_state.city}",
+                        title=f"Demand for {selected_cat} in {st.session_state.city}",
                         xaxis_title="Days",
                         yaxis_title="Demand Index",
-                        hovermode='x unified',
                         template='plotly_dark',
-                        height=400,
-                        showlegend=False
+                        height=350
                     )
-                    
                     st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Forecast insights
-                    avg_demand = sum(forecast_data) / len(forecast_data)
-                    trend = "increasing" if forecast_data[-1] > forecast_data[0] else "decreasing"
-                    st.info(f"📊 Average demand: {avg_demand:.1f} | Trend: {trend}")
-                else:
-                    st.warning("No forecast data available for this category.")
-                    
             except Exception as e:
-                st.error(f"Error loading forecast: {str(e)}")
-        else:
-            st.info("Add products to see demand forecasts.")
+                st.error(f"Forecast error: {str(e)}")
     else:
-        st.info("📦 You haven't added any products yet. Go to Inventory to add your first product!")
-        if st.button("➕ Add Your First Product"):
-            st.switch_page("producer/inventory.py")
+        st.info("Add products to see demand forecasts")
     
-    # Render floating chatbot
+    # Chatbot
     render_chatbot()
 
 if __name__ == "__main__":
