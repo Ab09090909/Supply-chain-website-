@@ -1,6 +1,6 @@
 import streamlit as st
 from utils.nav import render_sidebar
-from utils.chatbot import render_chatbot
+from utils.chatbot import render_chatbot_tab
 from admin.dashboard import render_admin_dashboard
 from admin.user_management import render_user_management
 from admin.product_management import render_product_management
@@ -17,9 +17,6 @@ if st.session_state.get("role") != "admin":
 
 render_sidebar()
 
-# AI Assistant button/chat at the top
-render_chatbot()
-
 tab = st.session_state.get("current_tab", "Dashboard")
 if tab == "Dashboard":
     render_admin_dashboard()
@@ -35,3 +32,5 @@ elif tab == "Settings":
     render_system_settings()
 elif tab == "Reports":
     render_reports()
+elif tab == "AI Assistant":
+    render_chatbot_tab()
