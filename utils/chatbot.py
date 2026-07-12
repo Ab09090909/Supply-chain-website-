@@ -13,7 +13,7 @@ def render_chatbot_tab():
     role = st.session_state.get("role", "customer")
 
     # Chat messages area (large height for full tab experience)
-    chat_container = st.container(height=500, border=True)
+    chat_container = st.container(height=250, border=True)
 
     with chat_container:
         if not st.session_state.chat_history:
