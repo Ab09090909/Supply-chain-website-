@@ -1,6 +1,6 @@
 import streamlit as st
 from utils.nav import render_sidebar
-from utils.chatbot import render_chatbot
+from utils.chatbot import render_chatbot_tab
 from customer.home import render_customer_home
 from customer.marketplace import render_customer_marketplace
 from customer.recommendations import render_recommendations
@@ -13,9 +13,6 @@ if st.session_state.get("role") != "customer":
 
 render_sidebar()
 
-# AI Assistant button/chat at the top
-render_chatbot()
-
 tab = st.session_state.get("current_tab", "Home")
 if tab == "Home":
     render_customer_home()
@@ -25,3 +22,5 @@ elif tab == "For You":
     render_recommendations()
 elif tab == "Favorites":
     render_favorites()
+elif tab == "AI Assistant":
+    render_chatbot_tab()
