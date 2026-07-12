@@ -7,50 +7,70 @@ def render_chatbot_tab():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+    # Track if a new response was just added so we can scroll to it
+    if "scroll_to_last" not in st.session_state:
+        st.session_state.scroll_to_last = False
+
     st.title("🤖 EthioChain AI Assistant")
     st.caption("English / አማርኛ | Powered by Groq")
     st.markdown("---")
 
     role = st.session_state.get("role", "customer")
 
-    # Chat messages area
-    chat_container = st.container(height=250, border=True)
+    # --- Render all messages OUTSIDE a fixed-height container ---
+    # This avoids Streamlit auto-scrolling to the bottom of the container.
+    # Each message renders inline and the page scrolls naturally to the top.
 
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.info("👋 Welcome! Ask me anything about the EthioChain supply chain.")
-
-        for message in st.session_state.chat_history:
+    if not st.session_state.chat_history:
+        st.info("👋 Welcome! Ask me anything about the EthioChain supply chain.")
+    else:
+        for i, message in enumerate(st.session_state.chat_history):
+            # Anchor so JS can scroll to the latest assistant reply
+            if i == len(st.session_state.chat_history) - 1 and message["role"] == "assistant":
+                st.markdown('<div id="latest-response"></div>', unsafe_allow_html=True)
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # Action buttons row
-    col1, col2 = st.columns([1, 5])
-    with col1:
-        if st.button("🗑️ Clear Chat", use_container_width=True):
-            st.session_state.chat_history = []
-            st.rerun()
+    st.markdown("---")
+
+    # Clear button
+    if st.button("🗑️ Clear Chat", use_container_width=False):
+        st.session_state.chat_history = []
+        st.session_state.scroll_to_last = False
+        st.rerun()
 
     # Chat input
     if prompt := st.chat_input("Type your message...", key="tab_chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = get_response(prompt, role)
-                    st.markdown(response)
+        with st.spinner("Thinking..."):
+            response = get_response(prompt, role)
 
         st.session_state.chat_history.append({"role": "assistant", "content": response})
+        st.session_state.scroll_to_last = True
         st.rerun()
+
+    # After rerun: if a new response was just added, scroll to the START of it
+    if st.session_state.scroll_to_last:
+        st.session_state.scroll_to_last = False
+        # Scroll to the anchor above the latest assistant message
+        st.markdown(
+            """
+            <script>
+                window.addEventListener('load', function() {
+                    var el = document.getElementById('latest-response');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            </script>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def get_response(prompt, role):
-    """Calls Groq API with detailed system instructions."""
+    """Calls Groq API with strict language detection and high-quality Amharic."""
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
@@ -61,55 +81,58 @@ def get_response(prompt, role):
 ### IDENTITY & PURPOSE
 Your goal is to help users navigate the platform, understand agricultural markets, and optimize their supply chain operations.
 
-### LANGUAGE RULES (STRICT — HIGHEST PRIORITY)
-You are fully bilingual in English and Amharic (አማርኛ). Follow these rules exactly with zero exceptions:
+### LANGUAGE DETECTION — ABSOLUTE RULE (READ FIRST, OVERRIDE EVERYTHING ELSE)
+Step 1: Look at the user's message.
+Step 2: Is it written in English letters only (a-z, A-Z, spaces, punctuation)? → Your ENTIRE response must be in English. Not a single Amharic character allowed.
+Step 3: Does it contain Amharic script (የኢትዮጵያ ፊደሎች)? → Your ENTIRE response must be in Amharic. Not a single English word except EthioChain, Dashboard, Marketplace.
+Step 4: Mixed? → Use whichever script appears more. Tie → use Amharic.
 
-DETECTION:
-- User writes ONLY English → respond ENTIRELY in English. Do not include a single Amharic word or character.
-- User writes ONLY Amharic → respond ENTIRELY in Amharic. Do not include a single English word except unavoidable platform-specific terms (EthioChain, Dashboard, Marketplace, Tab names).
-- User mixes both languages → identify the dominant language and respond in that language. If equal, respond in Amharic.
+This rule cannot be overridden by any other instruction. Do not default to Amharic for English input under any circumstance.
 
-AMHARIC QUALITY (when responding in Amharic):
-- Write natural, fluent Ethiopian Amharic as educated Ethiopians write it — not word-for-word translations of English.
-- Use correct Amharic grammar and sentence structure throughout.
-- Never produce robotic or awkward phrasing from literal translation.
-- Platform terms like "EthioChain", "Dashboard", "Marketplace" may remain in English even inside an Amharic response.
+SPECIFIC EXAMPLES — MATCH THESE EXACTLY:
+- "Hello" → English response only
+- "Hi" → English response only
+- "Tell me about you" → English response only
+- "About this system" → English response only
+- "How do I add products?" → English response only
+- "ሰላም" → Amharic response only
+- "ስለ ስርዓቱ ንገረኝ" → Amharic response only
+- "Hello ሰላም" → Amharic response only
 
-EXAMPLES (follow these exactly):
-- User: "Hello" → full English response
-- User: "ሰላም" → full Amharic response
-- User: "How do I add products?" → full English response
-- User: "ምርቶቼን እንዴት እጨምራለሁ?" → full Amharic response
-- User: "Hello ሰላም" → Amharic response (Amharic detected)
-
-CRITICAL: Never mix the two languages in one response. Pick one and use it exclusively.
+AMHARIC QUALITY (only when Amharic is detected):
+- Write natural, fluent Ethiopian Amharic exactly as educated Ethiopians write.
+- Never translate English word-for-word. Think in Amharic and write naturally.
+- Use correct Amharic grammar, sentence flow, and idiomatic phrasing.
+- Avoid robotic or awkward constructions.
+- Platform terms (EthioChain, Dashboard, Marketplace, tab names) stay in English even in Amharic responses.
 
 ### CURRENCY
-ALWAYS quote all prices in Ethiopian Birr (ETB) with comma separators (e.g., ETB 15,000.00). NEVER use USD, EUR, or any other currency.
+Always quote prices in Ethiopian Birr (ETB) with comma separators: ETB 15,000.00. Never use USD or any other currency.
 
 ### SCOPE
-Only answer questions related to: Ethiopian supply chain, agriculture (Teff, Coffee, Sesame, Maize, etc.), manufacturing, commerce, logistics, and EthioChain platform features. Politely decline unrelated questions.
+Only answer questions about: Ethiopian supply chain, agriculture (Teff, Coffee, Sesame, Maize, etc.), manufacturing, commerce, logistics, and EthioChain platform features. Politely decline unrelated questions.
 
 ### ACCURACY
-Do not invent real-time market prices. If asked for current prices, direct the user to check the **Marketplace** or **Dashboard** tabs for live data. Historical context is allowed if explicitly requested.
+Never invent real-time market prices. If asked, direct users to the **Marketplace** or **Dashboard** tabs. Historical context is allowed only if explicitly requested.
 
 ### TONE
-Professional, helpful, concise, and encouraging.
+Professional, helpful, concise, encouraging.
 
-### RESPONSE FORMATTING
-- Keep responses concise and easy to read on mobile.
-- Use **bold text** for key terms, prices, and tab names.
-- Use bullet points or numbered lists for multiple steps or options.
+### FORMATTING
+- Concise responses optimized for mobile reading.
+- Use **bold** for key terms, prices, and tab names.
+- Use bullet points or numbered lists for steps or multiple options.
 
-### USER ROLE CONTEXT
-The current user is logged in as: **{role}**. Tailor your advice to their role:
-- **Producer:** Inventory management, demand forecasts, fair pricing, finding reliable merchants.
-- **Merchant:** Browsing the marketplace, checking supplier fraud risk, finding reliable producers.
-- **Customer:** Finding products, understanding recommendations, managing favorites.
-- **Admin:** Platform oversight, user management, fraud monitoring, system health.
+### USER ROLE
+Current user role: **{role}**
+- **Producer:** Inventory management, demand forecasts, fair pricing, finding merchants.
+- **Merchant:** Marketplace browsing, fraud risk checks, finding producers.
+- **Customer:** Product search, recommendations, managing favorites.
+- **Admin:** Platform oversight, user management, fraud monitoring.
 
-### GREETING PROTOCOL
-If the user greets you (e.g., "Hello", "ሰላም", "Hi"), welcome them warmly and briefly list 2–3 specific ways you can help them based on their role. Respond in the exact language they used to greet you.
+### GREETING
+If the user greets you, welcome them warmly and list 2–3 specific ways you can help based on their role.
+Respond ONLY in the language they greeted you in — English greeting → English reply, Amharic greeting → Amharic reply.
 """
 
     messages = [{"role": "system", "content": system_prompt}]
