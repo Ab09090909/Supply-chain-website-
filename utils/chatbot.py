@@ -1,76 +1,87 @@
 import streamlit as st
 import requests
 
-def render_chatbot_in_sidebar():
-    """Renders the AI chatbot in the sidebar with a Clear button at the top."""
+def render_chatbot():
+    """Renders the AI Assistant button at top, or full chat window when open."""
+    if "chatbot_visible" not in st.session_state:
+        st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-    if "sidebar_chat_collapsed" not in st.session_state:
-        st.session_state.sidebar_chat_collapsed = False
 
-    with st.sidebar:
-        st.markdown("---")
-        
-        # Chat header
-        st.markdown("### 💬 AI Assistant")
-        
-        # Top action buttons: Clear and Collapse/Expand
-        col1, col2, col3 = st.columns([2, 1, 1])
-        
-        with col1:
-            # Clear button at the top
-            if st.button("🗑️ Clear", key="clear_chat_btn", help="Clear chat history", use_container_width=True):
-                st.session_state.chat_history = []
+    # If chatbot is closed, show the button at top
+    if not st.session_state.chatbot_visible:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("💬 AI Assistant", key="open_chat_btn", type="primary", use_container_width=True):
+                st.session_state.chatbot_visible = True
                 st.rerun()
-                
-        with col3:
-            # Collapse/Expand button
-            if st.session_state.sidebar_chat_collapsed:
-                if st.button("➕", key="expand_chat", help="Expand chat"):
-                    st.session_state.sidebar_chat_collapsed = False
-                    st.rerun()
-            else:
-                if st.button("", key="collapse_chat", help="Collapse chat"):
-                    st.session_state.sidebar_chat_collapsed = True
-                    st.rerun()
+        return
+
+    # Chatbot is open - show full chat window
+    st.markdown("""
+    <style>
+    .chat-window {
+        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+        border-radius: 16px;
+        border: 2px solid #2E86C1;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 8px 24px rgba(46, 134, 193, 0.3);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="chat-window">', unsafe_allow_html=True)
+    
+    # Horizontal buttons at the top
+    title_col, btn_col1, btn_col2 = st.columns([3, 1, 1])
+
+    with title_col:
+        st.markdown("<h3 style='color: #2E86C1; margin-top: 0; margin-bottom: 5px;'> EthioChain AI Assistant</h3>", unsafe_allow_html=True)
+        st.caption("English / አማርኛ")
+
+    with btn_col1:
+        if st.button("🗑️ Clear", key="clear_chat_btn", use_container_width=True, help="Clear chat history"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    with btn_col2:
+        if st.button("❌ Exit", key="close_chat_btn", use_container_width=True, help="Close chat"):
+            st.session_state.chatbot_visible = False
+            st.rerun()
+
+    st.markdown("---", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    role = st.session_state.get("role", "customer")
+    
+    # Chat messages area
+    chat_container = st.container(height=400, border=True)
+    
+    with chat_container:
+        if not st.session_state.chat_history:
+            st.info(" Welcome! Ask me anything about EthioChain supply chain.")
         
-        if not st.session_state.sidebar_chat_collapsed:
-            st.caption("English / አማርኛ")
-            st.markdown("---")
-            
-            role = st.session_state.get("role", "customer")
-            
-            # Chat messages area (fixed height)
-            chat_container = st.container(height=300)
-            
-            with chat_container:
-                if not st.session_state.chat_history:
-                    st.info("👋 Welcome! Ask me anything about EthioChain.")
-                
-                for message in st.session_state.chat_history:
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"])
-            
-            # Chat input form
-            if prompt := st.chat_input("Type your message...", key="sidebar_chat_input"):
-                # Add user message
-                st.session_state.chat_history.append({"role": "user", "content": prompt})
-                
-                # Display user message
-                with chat_container:
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-                
-                # Get AI response
-                with chat_container:
-                    with st.chat_message("assistant"):
-                        with st.spinner("Thinking..."):
-                            response = get_response(prompt, role)
-                            st.markdown(response)
-                
-                # Add assistant response to history
-                st.session_state.chat_history.append({"role": "assistant", "content": response})
-                st.rerun()
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Type your message...", key="chat_input"):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(prompt)
+        
+        with chat_container:
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = get_response(prompt, role)
+                    st.markdown(response)
+        
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        st.rerun()
 
 def get_response(prompt, role):
     """Calls Groq API with detailed system instructions."""
@@ -79,23 +90,16 @@ def get_response(prompt, role):
     except KeyError:
         return "⚠️ GROQ_API_KEY not found in secrets."
     
-    system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
+    system_prompt = """You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
 STRICT RULES:
 1. CURRENCY: ALWAYS quote all prices and financial figures in Ethiopian Birr (ETB) using comma separators (e.g., ETB 15,000.00). NEVER use USD, EUR, or any other currency.
-2. LANGUAGE: You are fully bilingual in English and Amharic (አማርኛ). Detect the language the user is typing in and respond in that exact language.
-3. SCOPE: Only answer questions related to the Ethiopian supply chain, agriculture, manufacturing, commerce, logistics, and the EthioChain platform features. Politely decline to answer unrelated questions.
+2. LANGUAGE: You are fully bilingual in English and Amharic. Detect the language the user is typing in and respond in that exact language.
+3. SCOPE: Only answer questions related to the Ethiopian supply chain, agriculture, manufacturing, commerce, logistics, and the EthioChain platform features.
 4. TONE: Professional, helpful, concise, and encouraging.
-5. PLATFORM NAVIGATION: If a user asks how to do something on the platform, guide them to the correct tab (e.g., "To add a product, please go to your Inventory tab").
 
 USER ROLE CONTEXT:
-The current user is logged in as a: {role}.
-- If Producer: Help them with inventory management, understanding demand forecasts, and finding merchants.
-- If Merchant: Help them browse the marketplace, check supplier fraud risks, and find reliable producers.
-- If Customer: Help them find products, understand recommendations, and manage their favorites.
-- If Admin: Help them with platform oversight, user management, and system health.
-
-If the user greets you, welcome them warmly and briefly list 2-3 ways you can help them based on their role."""
+The current user is logged in as a: """ + role + """."""
 
     messages = [{"role": "system", "content": system_prompt}]
     
