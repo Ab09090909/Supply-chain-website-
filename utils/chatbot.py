@@ -1,46 +1,50 @@
 # utils/chatbot.py
 import streamlit as st
 import requests
-from utils.ai_instructions import get_system_prompt
 
-def render_chatbot():
-    """Renders the AI chatbot at the bottom of the page."""
-    
-    # Initialize chat history in session state
+def render_chatbot_tab():
+    """
+    Renders the floating AI chatbot. 
+    Reads role from session state and uses OpenRouter API.
+    """
+    # Initialize chat history
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
-    # Use an expander at the bottom to simulate a collapsible panel
-    with st.expander("💬 EthioChain AI Assistant", expanded=False):
-        st.caption("Ask about supply chain, prices, forecasts, or fraud checks.")
+    # Use an expander at the bottom to simulate a floating panel
+    with st.expander(" EthioChain AI Assistant", expanded=False):
+        st.caption("Ask about supply chain, prices, forecasts, or fraud checks. Supports English & Amharic.")
         
-        # Display existing chat messages
+        # Display chat history
         for message in st.session_state.chat_messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # Chat input field
+        # Chat input
         if prompt := st.chat_input("Type your message here..."):
-            # 1. Add user message to history and display it
+            # Add user message to history
             st.session_state.chat_messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
 
-            # 2. Get the correct system prompt for the current user role
+            # Get role-specific system prompt
             role = st.session_state.get("role", "customer")
-            system_prompt = get_system_prompt(role)
+            system_prompt = f"""You are EthioChain AI, an expert supply chain assistant for the Ethiopian market. 
+            Current user role: {role}. 
+            Always quote prices in Ethiopian Birr (ETB) with comma separators. 
+            Keep answers concise and focused on supply chain, agriculture, manufacturing, and trade."""
 
-            # 3. Prepare the messages payload for the API
+            # Prepare API payload
             api_messages = [{"role": "system", "content": system_prompt}] + \
                            [{"role": m["role"], "content": m["content"]} for m in st.session_state.chat_messages]
 
-            # 4. Call the OpenRouter API and display response
+            # Call OpenRouter API
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     try:
                         api_key = st.secrets.get("OPENROUTER_API_KEY")
                         if not api_key:
-                            st.error("️ OpenRouter API key is missing in Streamlit Secrets.")
+                            st.error("⚠️ OpenRouter API key is missing in Streamlit Secrets.")
                             return
                         
                         response = requests.post(
@@ -61,10 +65,10 @@ def render_chatbot():
                         ai_response = data["choices"][0]["message"]["content"]
                         st.markdown(ai_response)
                         
-                        # Save assistant response to history
+                        # Save assistant response
                         st.session_state.chat_messages.append({"role": "assistant", "content": ai_response})
                         
                     except requests.exceptions.Timeout:
-                        st.error(" The AI took too long to respond. Please try again.")
+                        st.error("️ The AI took too long to respond. Please try again.")
                     except Exception as e:
                         st.error(f"❌ Failed to connect to AI: {str(e)}")
