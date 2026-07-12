@@ -2,26 +2,26 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the floating AI chatbot with only message input."""
+    """Renders the floating AI chatbot at the bottom of the screen."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for floating chatbot
+    # CSS for floating chatbot at bottom
     st.markdown("""
     <style>
-    /* Floating chat container */
+    /* Floating chat container - fixed at bottom right */
     .floating-chat-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 350px;
-        max-width: 90vw;
-        z-index: 9999;
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        width: 350px !important;
+        max-width: 90vw !important;
+        z-index: 9999 !important;
     }
     
-    /* Chat window when open */
+    /* Chat window styling */
     .chat-window {
         background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
         border-radius: 16px;
@@ -108,10 +108,17 @@ def render_chatbot():
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
     }
+    
+    /* Input area */
+    .chat-input-area {
+        padding: 15px;
+        background: #1a1d29;
+        border-top: 1px solid #2E86C1;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # If chatbot is closed, show floating open button
+    # If chatbot is closed, show floating open button at bottom
     if not st.session_state.chatbot_visible:
         st.markdown("""
         <div class="floating-chat-container">
@@ -128,7 +135,7 @@ def render_chatbot():
             st.rerun()
         return
 
-    # Chatbot is open - show floating window
+    # Chatbot is open - show floating window at bottom
     st.markdown("""
     <div class="floating-chat-container">
         <div class="chat-window">
@@ -137,7 +144,7 @@ def render_chatbot():
                     <div class="chat-title">💬 EthioChain AI</div>
                     <div class="chat-subtitle">English / አማርኛ</div>
                 </div>
-                <button class="exit-btn" onclick="document.getElementById('close_chat_hidden').click()"></button>
+                <button class="exit-btn" onclick="document.getElementById('close_chat_hidden').click()">✕</button>
             </div>
             <div class="chat-messages">
     """, unsafe_allow_html=True)
@@ -168,10 +175,8 @@ def render_chatbot():
     
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Chat input area - ONLY this is visible for typing
-    st.markdown("""
-    <div style="padding: 15px; background: #1a1d29; border-top: 1px solid #2E86C1;">
-    """, unsafe_allow_html=True)
+    # Chat input area
+    st.markdown('<div class="chat-input-area">', unsafe_allow_html=True)
     
     if prompt := st.chat_input("Type your message...", key="chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
