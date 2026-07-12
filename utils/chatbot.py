@@ -2,123 +2,186 @@ import streamlit as st
 import requests
 
 def render_chatbot():
-    """Renders the AI Assistant with a truly floating window."""
+    """Renders the floating AI chatbot with only message input."""
     if "chatbot_visible" not in st.session_state:
         st.session_state.chatbot_visible = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS to make the chat window float
+    # CSS for floating chatbot
     st.markdown("""
     <style>
-    /* Target the column containing the chat input and make it float */
-    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stChatInput"]) {
-        position: fixed !important;
-        bottom: 20px !important;
-        right: 20px !important;
-        width: 400px !important;
-        max-width: 90vw !important;
-        max-height: 600px !important;
-        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%) !important;
-        border-radius: 16px !important;
-        border: 2px solid #2E86C1 !important;
-        z-index: 9999 !important;
-        padding: 20px !important;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.7) !important;
-        overflow-y: auto !important;
-        display: flex !important;
-        flex-direction: column !important;
+    /* Floating chat container */
+    .floating-chat-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        max-width: 90vw;
+        z-index: 9999;
     }
     
-    /* Style the buttons inside the floating window */
-    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stChatInput"]) button[kind="secondary"] {
-        background: rgba(255,255,255,0.1) !important;
-        color: white !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-    }
-    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stChatInput"]) button[kind="secondary"]:hover {
-        background: rgba(255,0,0,0.3) !important;
+    /* Chat window when open */
+    .chat-window {
+        background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+        border-radius: 16px;
+        border: 2px solid #2E86C1;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        overflow: hidden;
+        margin-bottom: 10px;
     }
     
-    /* Hide the default Streamlit chat input container border */
-    div[data-testid="stChatInput"] {
-        background: transparent !important;
+    /* Chat header */
+    .chat-header {
+        background: #2E86C1;
+        color: white;
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .chat-title {
+        font-size: 16px;
+        font-weight: bold;
+    }
+    
+    .chat-subtitle {
+        font-size: 11px;
+        color: #d0e8f5;
+    }
+    
+    /* Chat messages area */
+    .chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 15px;
+        background: #0f1117;
+    }
+    
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: #2E86C1;
+        border-radius: 10px;
+    }
+    
+    /* Exit button */
+    .exit-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .exit-btn:hover {
+        background: rgba(255,0,0,0.6);
+    }
+    
+    /* Floating open button */
+    .open-chat-btn {
+        background: linear-gradient(135deg, #2E86C1 0%, #1a5276 100%);
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(46, 134, 193, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    .open-chat-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(46, 134, 193, 0.6);
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # If chatbot is closed, show the floating open button
+    # If chatbot is closed, show floating open button
     if not st.session_state.chatbot_visible:
-        # This button will also be targeted by CSS if we wanted, but let's keep it simple
         st.markdown("""
-        <style>
-        /* Make the open button float too */
-        div[data-testid="stVerticalBlock"] > div:has(button[kind="primary"][aria-label="Open Chat"]) {
-            position: fixed !important;
-            bottom: 20px !important;
-            right: 20px !important;
-            z-index: 9999 !important;
-        }
-        </style>
+        <div class="floating-chat-container">
+            <button class="open-chat-btn" onclick="document.getElementById('open_chat_hidden').click()">
+                <span>💬</span>
+                <span>AI Assistant</span>
+            </button>
+        </div>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("💬 AI Assistant", key="open_chat_btn", type="primary", use_container_width=True):
-                st.session_state.chatbot_visible = True
-                st.rerun()
+        # Hidden button to trigger open
+        if st.button("", key="open_chat_hidden", type="secondary"):
+            st.session_state.chatbot_visible = True
+            st.rerun()
         return
 
-    # Chatbot is open - render the floating window content
-    # The CSS above will automatically make this column float
+    # Chatbot is open - show floating window
+    st.markdown("""
+    <div class="floating-chat-container">
+        <div class="chat-window">
+            <div class="chat-header">
+                <div>
+                    <div class="chat-title">💬 EthioChain AI</div>
+                    <div class="chat-subtitle">English / አማርኛ</div>
+                </div>
+                <button class="exit-btn" onclick="document.getElementById('close_chat_hidden').click()"></button>
+            </div>
+            <div class="chat-messages">
+    """, unsafe_allow_html=True)
     
-    # Header with Clear and Exit buttons
-    title_col, btn_col1, btn_col2 = st.columns([3, 1, 1])
-
-    with title_col:
-        st.markdown("<h3 style='color: #2E86C1; margin-top: 0; margin-bottom: 5px;'>💬 EthioChain AI</h3>", unsafe_allow_html=True)
-        st.caption("English / አማርኛ")
-
-    with btn_col1:
-        if st.button("🗑️ Clear", key="clear_chat_btn", use_container_width=True, help="Clear chat history"):
-            st.session_state.chat_history = []
-            st.rerun()
-
-    with btn_col2:
-        if st.button("❌ Exit", key="close_chat_btn", use_container_width=True, help="Close chat"):
-            st.session_state.chatbot_visible = False
-            st.rerun()
-
-    st.markdown("---")
-    
+    # Display chat messages
     role = st.session_state.get("role", "customer")
     
-    # Chat messages area (fixed height inside the floating window)
-    chat_container = st.container(height=350)
+    if not st.session_state.chat_history:
+        st.markdown('<div style="text-align: center; color: #666; padding: 20px;">Welcome! Ask me anything about EthioChain supply chain.</div>', unsafe_allow_html=True)
     
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.info(" Welcome! Ask me anything about EthioChain supply chain.")
-        
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    for message in st.session_state.chat_history:
+        if message["role"] == "user":
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-end; margin: 10px 0;">
+                <div style="background: #2E86C1; color: white; padding: 10px 15px; border-radius: 18px 18px 4px 18px; max-width: 80%; word-wrap: break-word;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-start; margin: 10px 0;">
+                <div style="background: #2a2d36; color: #e8eaed; padding: 10px 15px; border-radius: 18px 18px 18px 4px; max-width: 80%; word-wrap: break-word;">
+                    {message["content"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Chat input (The CSS targets this to make the whole column float)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Chat input area - ONLY this is visible for typing
+    st.markdown("""
+    <div style="padding: 15px; background: #1a1d29; border-top: 1px solid #2E86C1;">
+    """, unsafe_allow_html=True)
+    
     if prompt := st.chat_input("Type your message...", key="chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-        
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = get_response(prompt, role)
-                    st.markdown(response)
-        
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        st.rerun()
+    
+    st.markdown('</div></div></div>', unsafe_allow_html=True)
+    
+    # Hidden button to close chat
+    if st.button("", key="close_chat_hidden", type="secondary"):
+        st.session_state.chatbot_visible = False
         st.rerun()
 
 def get_response(prompt, role):
