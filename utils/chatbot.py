@@ -2,23 +2,23 @@ import streamlit as st
 import requests
 
 def render_chatbot_tab():
-    """Renders the AI chatbot as a fixed-position tab."""
+    """Renders the AI chatbot as a fixed-position tab with half size."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for fixed position chat window
+    # CSS for fixed position chat window (HALF SIZE)
     st.markdown("""
     <style>
     .fixed-chat-container {
         position: fixed !important;
         top: 100px !important;
         right: 20px !important;
-        width: 400px !important;
+        width: 250px !important; /* Reduced from 400px */
         max-width: 90vw !important;
-        max-height: 70vh !important;
+        max-height: 50vh !important; /* Reduced from 70vh */
         z-index: 9998 !important;
         background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%) !important;
-        border-radius: 16px !important;
+        border-radius: 12px !important;
         border: 2px solid #2E86C1 !important;
         box-shadow: 0 10px 40px rgba(0,0,0,0.7) !important;
         overflow: hidden !important;
@@ -27,30 +27,30 @@ def render_chatbot_tab():
     .fixed-chat-header {
         background: #2E86C1 !important;
         color: white !important;
-        padding: 15px 20px !important;
+        padding: 10px 12px !important; /* Reduced padding */
     }
     
     .fixed-chat-title {
-        font-size: 18px !important;
+        font-size: 14px !important; /* Reduced font size */
         font-weight: bold !important;
         margin: 0 !important;
     }
     
     .fixed-chat-subtitle {
-        font-size: 12px !important;
+        font-size: 10px !important; /* Reduced font size */
         color: #d0e8f5 !important;
-        margin-top: 5px !important;
+        margin-top: 2px !important;
     }
     
     .fixed-chat-messages {
-        height: 400px !important;
+        height: 150px !important; /* Reduced from 400px */
         overflow-y: auto !important;
-        padding: 15px !important;
+        padding: 10px !important;
         background: #0f1117 !important;
     }
     
     .fixed-chat-messages::-webkit-scrollbar {
-        width: 6px !important;
+        width: 4px !important;
     }
     
     .fixed-chat-messages::-webkit-scrollbar-thumb {
@@ -59,7 +59,7 @@ def render_chatbot_tab():
     }
     
     .fixed-chat-input {
-        padding: 15px !important;
+        padding: 10px !important;
         background: #1a1d29 !important;
         border-top: 1px solid #2E86C1 !important;
     }
@@ -68,9 +68,10 @@ def render_chatbot_tab():
         background: rgba(255,255,255,0.2) !important;
         color: white !important;
         border: none !important;
-        padding: 8px 15px !important;
+        padding: 4px 8px !important;
         border-radius: 5px !important;
         cursor: pointer !important;
+        font-size: 12px !important;
     }
     
     .clear-btn:hover {
@@ -86,7 +87,7 @@ def render_chatbot_tab():
     <div class="fixed-chat-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div class="fixed-chat-title">💬 EthioChain AI Assistant</div>
+                <div class="fixed-chat-title">💬 EthioChain AI</div>
                 <div class="fixed-chat-subtitle">English / አማርኛ</div>
             </div>
         </div>
@@ -96,7 +97,7 @@ def render_chatbot_tab():
     # Clear button row
     col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("🗑️ Clear", key="clear_chat_fixed", use_container_width=True):
+        if st.button("️ Clear", key="clear_chat_fixed", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
     
@@ -106,21 +107,21 @@ def render_chatbot_tab():
     st.markdown('<div class="fixed-chat-messages">', unsafe_allow_html=True)
     
     if not st.session_state.chat_history:
-        st.markdown('<div style="text-align: center; color: #666; padding: 20px;">👋 Welcome! Ask me anything about EthioChain supply chain.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align: center; color: #666; padding: 10px; font-size: 12px;"> Welcome! Ask me anything.</div>', unsafe_allow_html=True)
     
     for message in st.session_state.chat_history:
         if message["role"] == "user":
             st.markdown(f"""
-            <div style="display: flex; justify-content: flex-end; margin: 10px 0;">
-                <div style="background: #2E86C1; color: white; padding: 10px 15px; border-radius: 18px 18px 4px 18px; max-width: 80%; word-wrap: break-word;">
+            <div style="display: flex; justify-content: flex-end; margin: 5px 0;">
+                <div style="background: #2E86C1; color: white; padding: 6px 10px; border-radius: 12px 12px 2px 12px; max-width: 90%; word-wrap: break-word; font-size: 12px;">
                     {message["content"]}
                 </div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="display: flex; justify-content: flex-start; margin: 10px 0;">
-                <div style="background: #2a2d36; color: #e8eaed; padding: 10px 15px; border-radius: 18px 18px 18px 4px; max-width: 80%; word-wrap: break-word;">
+            <div style="display: flex; justify-content: flex-start; margin: 5px 0;">
+                <div style="background: #2a2d36; color: #e8eaed; padding: 6px 10px; border-radius: 12px 12px 12px 2px; max-width: 90%; word-wrap: break-word; font-size: 12px;">
                     {message["content"]}
                 </div>
             </div>
@@ -131,7 +132,7 @@ def render_chatbot_tab():
     # Chat input
     st.markdown('<div class="fixed-chat-input">', unsafe_allow_html=True)
     
-    if prompt := st.chat_input("Type your message...", key="fixed_chat_input"):
+    if prompt := st.chat_input("Type message...", key="fixed_chat_input"):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         st.rerun()
     
