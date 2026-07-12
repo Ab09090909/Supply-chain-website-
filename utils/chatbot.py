@@ -2,55 +2,59 @@ import streamlit as st
 import requests
 
 def render_chatbot_tab():
-    """Renders the AI chatbot as a fixed-position tab with half size."""
+    """Renders the AI chatbot as a fixed-position tab with half height."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # CSS for fixed position chat window (HALF SIZE)
+    # CSS for fixed position chat window (ONLY HEIGHT REDUCED)
     st.markdown("""
     <style>
     .fixed-chat-container {
         position: fixed !important;
         top: 100px !important;
         right: 20px !important;
-        width: 250px !important; /* Reduced from 400px */
-        max-width: 90vw !important;
-        max-height: 50vh !important; /* Reduced from 70vh */
+        width: 350px !important;
+        height: 350px !important; /* REDUCED: Fixed half height */
+        max-height: 350px !important;
         z-index: 9998 !important;
         background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%) !important;
         border-radius: 12px !important;
         border: 2px solid #2E86C1 !important;
         box-shadow: 0 10px 40px rgba(0,0,0,0.7) !important;
         overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
     
     .fixed-chat-header {
         background: #2E86C1 !important;
         color: white !important;
-        padding: 10px 12px !important; /* Reduced padding */
+        padding: 10px 15px !important;
+        flex-shrink: 0 !important;
     }
     
     .fixed-chat-title {
-        font-size: 14px !important; /* Reduced font size */
+        font-size: 16px !important;
         font-weight: bold !important;
         margin: 0 !important;
     }
     
     .fixed-chat-subtitle {
-        font-size: 10px !important; /* Reduced font size */
+        font-size: 11px !important;
         color: #d0e8f5 !important;
-        margin-top: 2px !important;
+        margin-top: 3px !important;
     }
     
     .fixed-chat-messages {
-        height: 150px !important; /* Reduced from 400px */
+        height: 180px !important; /* REDUCED: Half of 400px */
         overflow-y: auto !important;
         padding: 10px !important;
         background: #0f1117 !important;
+        flex-grow: 1 !important;
     }
     
     .fixed-chat-messages::-webkit-scrollbar {
-        width: 4px !important;
+        width: 5px !important;
     }
     
     .fixed-chat-messages::-webkit-scrollbar-thumb {
@@ -62,13 +66,14 @@ def render_chatbot_tab():
         padding: 10px !important;
         background: #1a1d29 !important;
         border-top: 1px solid #2E86C1 !important;
+        flex-shrink: 0 !important;
     }
     
     .clear-btn {
         background: rgba(255,255,255,0.2) !important;
         color: white !important;
         border: none !important;
-        padding: 4px 8px !important;
+        padding: 5px 10px !important;
         border-radius: 5px !important;
         cursor: pointer !important;
         font-size: 12px !important;
@@ -97,7 +102,7 @@ def render_chatbot_tab():
     # Clear button row
     col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("️ Clear", key="clear_chat_fixed", use_container_width=True):
+        if st.button("🗑️ Clear", key="clear_chat_fixed", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
     
@@ -107,13 +112,13 @@ def render_chatbot_tab():
     st.markdown('<div class="fixed-chat-messages">', unsafe_allow_html=True)
     
     if not st.session_state.chat_history:
-        st.markdown('<div style="text-align: center; color: #666; padding: 10px; font-size: 12px;"> Welcome! Ask me anything.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align: center; color: #666; padding: 10px; font-size: 13px;">👋 Welcome! Ask me anything.</div>', unsafe_allow_html=True)
     
     for message in st.session_state.chat_history:
         if message["role"] == "user":
             st.markdown(f"""
             <div style="display: flex; justify-content: flex-end; margin: 5px 0;">
-                <div style="background: #2E86C1; color: white; padding: 6px 10px; border-radius: 12px 12px 2px 12px; max-width: 90%; word-wrap: break-word; font-size: 12px;">
+                <div style="background: #2E86C1; color: white; padding: 8px 12px; border-radius: 14px 14px 2px 14px; max-width: 90%; word-wrap: break-word; font-size: 13px;">
                     {message["content"]}
                 </div>
             </div>
@@ -121,7 +126,7 @@ def render_chatbot_tab():
         else:
             st.markdown(f"""
             <div style="display: flex; justify-content: flex-start; margin: 5px 0;">
-                <div style="background: #2a2d36; color: #e8eaed; padding: 6px 10px; border-radius: 12px 12px 12px 2px; max-width: 90%; word-wrap: break-word; font-size: 12px;">
+                <div style="background: #2a2d36; color: #e8eaed; padding: 8px 12px; border-radius: 14px 14px 14px 2px; max-width: 90%; word-wrap: break-word; font-size: 13px;">
                     {message["content"]}
                 </div>
             </div>
@@ -143,7 +148,7 @@ def get_response(prompt, role):
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except KeyError:
-        return "⚠️ GROQ_API_KEY not found in secrets."
+        return "️ GROQ_API_KEY not found in secrets."
     
     system_prompt = f"""You are EthioChain AI, the official intelligent assistant for the EthioChain commercial supply chain platform in Ethiopia. 
 
@@ -203,6 +208,6 @@ If the user greets you, welcome them warmly and briefly list 2-3 ways you can he
         return resp.json()["choices"][0]["message"]["content"]
         
     except requests.exceptions.Timeout:
-        return "⚠️ Request timeout. Please try again."
+        return "️ Request timeout. Please try again."
     except Exception as e:
         return f"⚠️ Error: {str(e)}"
